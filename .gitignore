@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Directory for sample data
+samples/
+
+# Directory for the local db
