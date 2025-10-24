@@ -36,13 +36,13 @@ uv sync --group dev
 Run migrations to create the database schema:
 
 ```bash
-uv run python -m cli.migrate migrate
+uv run python -m cli migrate apply
 ```
 
 Check migration status:
 
 ```bash
-uv run python -m cli.migrate status
+uv run python -m cli migrate status
 ```
 
 ### 2. Create Accounts
@@ -50,7 +50,7 @@ uv run python -m cli.migrate status
 Create an account for each financial institution:
 
 ```bash
-uv run python -m cli.accounts --create-account
+uv run python -m cli accounts create
 ```
 
 You'll be prompted for:
@@ -61,7 +61,7 @@ You'll be prompted for:
 List existing accounts:
 
 ```bash
-uv run python -m cli.accounts --list-accounts
+uv run python -m cli accounts list
 ```
 
 ### 3. Import Transactions
@@ -69,23 +69,23 @@ uv run python -m cli.accounts --list-accounts
 Import transactions from a CSV file:
 
 ```bash
-uv run python -m cli.transactions --account-name <account_name> <csv_file>
+uv run python -m cli transactions ingest <csv_file> --account-name <account_name>
 ```
 
 Examples:
 
 ```bash
 # Import Bank of America transactions
-uv run python -m cli.transactions --account-name bofa_checking samples/bofa.csv
+uv run python -m cli transactions ingest samples/bofa.csv --account-name bofa_checking
 
 # Import Chase credit card transactions
-uv run python -m cli.transactions --account-name chase_card samples/chase.csv
+uv run python -m cli transactions ingest samples/chase.csv --account-name chase_card
 
 # Import American Express transactions
-uv run python -m cli.transactions --account-name amex_card samples/amex.csv
+uv run python -m cli transactions ingest samples/amex.csv --account-name amex_card
 
 # Import Discover transactions
-uv run python -m cli.transactions --account-name discover_card samples/discover.csv
+uv run python -m cli transactions ingest samples/discover.csv --account-name discover_card
 ```
 
 **Note**: Duplicate transactions (identified by checksum) are automatically skipped.
@@ -154,35 +154,47 @@ Necker classifies all transactions into three types:
 
 ## CLI Reference
 
+### Main CLI
+
+```bash
+# Show all available commands
+uv run python -m cli --help
+
+# Show help for a specific command
+uv run python -m cli accounts --help
+uv run python -m cli transactions --help
+uv run python -m cli migrate --help
+```
+
 ### Account Management
 
 ```bash
 # Create a new account interactively
-uv run python -m cli.accounts --create-account
+uv run python -m cli accounts create
 
 # List all accounts
-uv run python -m cli.accounts --list-accounts
+uv run python -m cli accounts list
 ```
 
 ### Transaction Import
 
 ```bash
 # Import transactions from CSV
-uv run python -m cli.transactions --account-name <account_name> <csv_file>
+uv run python -m cli transactions ingest <csv_file> --account-name <account_name>
 
 # Examples
-uv run python -m cli.transactions --account-name bofa_checking transactions.csv
-uv run python -m cli.transactions --account-name chase_card ~/Downloads/chase_2024.csv
+uv run python -m cli transactions ingest transactions.csv --account-name bofa_checking
+uv run python -m cli transactions ingest ~/Downloads/chase_2024.csv --account-name chase_card
 ```
 
 ### Database Migrations
 
 ```bash
-# Run all pending migrations
-uv run python -m cli.migrate migrate
+# Apply all pending migrations
+uv run python -m cli migrate apply
 
 # Check migration status
-uv run python -m cli.migrate status
+uv run python -m cli migrate status
 ```
 
 ## Development

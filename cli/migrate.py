@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
-import argparse
 from db import manager as dbmgr
 
 
@@ -55,11 +53,14 @@ def apply_migration(conn, migration_file):
         raise
 
 
-def status():
+def cmd_status(args):
+    """Show migration status."""
     db_path = dbmgr.get_db_path()
 
     if not db_path.exists():
-        print("Database does not exist. Run 'migrate' to create it.")
+        print(
+            "Database does not exist. Run 'python -m cli migrate apply' to create it."
+        )
         return
 
     with dbmgr.connect() as conn:
@@ -84,7 +85,8 @@ def status():
         print(f"Pending: {pending_count}")
 
 
-def migrate():
+def cmd_apply(args):
+    """Apply pending migrations."""
     with dbmgr.connect() as conn:
         init_schema_migrations_table(conn)
         applied = get_applied_migrations(conn)
@@ -104,21 +106,34 @@ def migrate():
         print(f"Successfully applied {len(pending)} migration(s).")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Database migration tool")
-    parser.add_argument("command", choices=["status", "migrate"], help="Command to run")
+def setup_parser(subparsers):
+    """Setup migrate subcommand parser.
 
-    args = parser.parse_args()
+    Args:
+        subparsers: The subparsers object from the main CLI
+    """
+    parser = subparsers.add_parser(
+        "migrate",
+        help="Database migrations",
+        description="Manage database schema migrations",
+    )
 
-    try:
-        if args.command == "status":
-            status()
-        elif args.command == "migrate":
-            migrate()
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    # Add subcommands for migrate
+    migrate_subparsers = parser.add_subparsers(
+        title="subcommands",
+        description="Available migration commands",
+        dest="subcommand",
+        required=True,
+    )
 
+    # migrate status
+    status_parser = migrate_subparsers.add_parser(
+        "status", help="Show migration status"
+    )
+    status_parser.set_defaults(func=cmd_status)
 
-if __name__ == "__main__":
-    main()
+    # migrate apply
+    apply_parser = migrate_subparsers.add_parser(
+        "apply", help="Apply pending migrations"
+    )
+    apply_parser.set_defaults(func=cmd_apply)

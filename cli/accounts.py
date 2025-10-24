@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 import sys
-import argparse
 from ingestion import get_available_modules
 from services import accounts as account_service
 
 
-def list_accounts():
+def cmd_list(args):
     """List all accounts in the database."""
     accounts = account_service.find_all()
 
@@ -26,7 +25,7 @@ def list_accounts():
     print(f"\nTotal accounts: {len(accounts)}")
 
 
-def create_account():
+def cmd_create(args):
     """Interactively create a new account."""
     available_types = get_available_modules()
 
@@ -69,33 +68,32 @@ def create_account():
         sys.exit(1)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Account management CLI")
-    parser.add_argument(
-        "--list-accounts", action="store_true", help="List all accounts"
+def setup_parser(subparsers):
+    """Setup accounts subcommand parser.
+
+    Args:
+        subparsers: The subparsers object from the main CLI
+    """
+    parser = subparsers.add_parser(
+        "accounts",
+        help="Manage accounts",
+        description="Create and list financial accounts",
     )
-    parser.add_argument(
-        "--create-account",
-        action="store_true",
-        help="Create a new account interactively",
+
+    # Add subcommands for accounts
+    accounts_subparsers = parser.add_subparsers(
+        title="subcommands",
+        description="Available account commands",
+        dest="subcommand",
+        required=True,
     )
 
-    args = parser.parse_args()
+    # accounts list
+    list_parser = accounts_subparsers.add_parser("list", help="List all accounts")
+    list_parser.set_defaults(func=cmd_list)
 
-    # Ensure at least one command is specified
-    if not args.list_accounts and not args.create_account:
-        parser.print_help()
-        sys.exit(1)
-
-    try:
-        if args.list_accounts:
-            list_accounts()
-        elif args.create_account:
-            create_account()
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+    # accounts create
+    create_parser = accounts_subparsers.add_parser(
+        "create", help="Create a new account interactively"
+    )
+    create_parser.set_defaults(func=cmd_create)
