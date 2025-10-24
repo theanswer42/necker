@@ -60,14 +60,19 @@ def ingest(source: TextIO, account_id: int) -> List[Transaction]:
             post_date = datetime.strptime(post_date_str, "%m/%d/%Y").date()
 
             # Parse amount and determine type
-            # Discover: positive = charge/expense, negative = payment/income
             amount_value = Decimal(amount_str.replace(",", ""))
-            if amount_value < 0:
+            amount = abs(amount_value)
+
+            # Check for credit card payment transfers
+            if category == "Payments and Credits" and description.startswith(
+                "DIRECTPAY FULL BALANCE"
+            ):
+                transaction_type = "transfer"
+            # Discover: positive = charge/expense, negative = payment/income
+            elif amount_value < 0:
                 transaction_type = "income"
-                amount = abs(amount_value)
             else:
                 transaction_type = "expense"
-                amount = amount_value
 
             transaction = Transaction.create_with_checksum(
                 raw_data=raw_line,

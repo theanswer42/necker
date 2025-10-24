@@ -57,13 +57,30 @@ def ingest(source: TextIO, account_id: int) -> List[Transaction]:
             # Parse date
             transaction_date = datetime.strptime(date_str, "%m/%d/%Y").date()
 
-            # Parse amount and determine type
+            # Parse amount
             if amount_str.startswith("-"):
-                transaction_type = "expense"
                 amount = Decimal(amount_str[1:].replace(",", ""))
+                is_outgoing = True
+            else:
+                amount = Decimal(amount_str.replace(",", ""))
+                is_outgoing = False
+
+            # Check for credit card payment transfers
+            credit_card_payment_prefixes = (
+                "DISCOVER DES:E-PAYMENT",
+                "CHASE CREDIT CRD DES:AUTOPAY",
+                "AMERICAN EXPRESS DES:ACH PMT",
+            )
+
+            if any(
+                description.startswith(prefix)
+                for prefix in credit_card_payment_prefixes
+            ):
+                transaction_type = "transfer"
+            elif is_outgoing:
+                transaction_type = "expense"
             else:
                 transaction_type = "income"
-                amount = Decimal(amount_str.replace(",", ""))
 
             # Create additional metadata
             additional_metadata = {"running_balance": running_balance}
