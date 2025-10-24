@@ -1,7 +1,9 @@
+import ingestion.amex as amex
 import ingestion.bofa as bofa
+import ingestion.chase as chase
 import ingestion.discover as discover
 
-_INGESTION_MODULES = {"bofa": bofa, "discover": discover}
+_INGESTION_MODULES = {"amex": amex, "bofa": bofa, "chase": chase, "discover": discover}
 
 
 def get_ingestion_module(module_name: str):
