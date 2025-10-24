@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     description TEXT NOT NULL,
     category TEXT,
     amount REAL NOT NULL,
-    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('credit', 'debit')),
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer')),
     additional_metadata TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES accounts(id)

@@ -15,7 +15,7 @@ class Transaction:
     description: str
     category: Optional[str]
     amount: Decimal  # always positive
-    type: str  # 'credit' or 'debit'
+    type: str  # 'income', 'expense', or 'transfer'
     additional_metadata: Optional[dict] = None
 
     @classmethod

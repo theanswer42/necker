@@ -59,10 +59,10 @@ def ingest(source: TextIO, account_id: int) -> List[Transaction]:
 
             # Parse amount and determine type
             if amount_str.startswith("-"):
-                transaction_type = "debit"
+                transaction_type = "expense"
                 amount = Decimal(amount_str[1:].replace(",", ""))
             else:
-                transaction_type = "credit"
+                transaction_type = "income"
                 amount = Decimal(amount_str.replace(",", ""))
 
             # Create additional metadata

@@ -1,6 +1,7 @@
 import ingestion.bofa as bofa
+import ingestion.discover as discover
 
-_INGESTION_MODULES = {"bofa": bofa}
+_INGESTION_MODULES = {"bofa": bofa, "discover": discover}
 
 
 def get_ingestion_module(module_name: str):
