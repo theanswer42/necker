@@ -2,16 +2,15 @@
 
 import sys
 from pathlib import Path
-from services import accounts as account_service
-from services import transactions as transaction_service
 from ingestion import get_ingestion_module
 
 
-def cmd_ingest(args):
+def cmd_ingest(args, services):
     """Ingest transactions from a CSV file for a specific account.
 
     Args:
         args: Parsed command-line arguments with csv_file and account_name
+        services: Services container with accounts and transactions services
     """
     # Validate CSV file exists
     csv_path = Path(args.csv_file)
@@ -20,7 +19,7 @@ def cmd_ingest(args):
         sys.exit(1)
 
     # Look up account by name
-    account = account_service.find_by_name(args.account_name)
+    account = services.accounts.find_by_name(args.account_name)
     if not account:
         print(f"Error: Account '{args.account_name}' not found.")
         print("\nUse 'python -m cli accounts list' to see available accounts.")
@@ -50,7 +49,7 @@ def cmd_ingest(args):
             return
 
         # Bulk insert transactions
-        inserted_count = transaction_service.bulk_create(transactions)
+        inserted_count = services.transactions.bulk_create(transactions)
 
         print(f"✓ Successfully inserted {inserted_count} transactions")
 

@@ -2,12 +2,11 @@
 
 import sys
 from ingestion import get_available_modules
-from services import accounts as account_service
 
 
-def cmd_list(args):
+def cmd_list(args, services):
     """List all accounts in the database."""
-    accounts = account_service.find_all()
+    accounts = services.accounts.find_all()
 
     if not accounts:
         print("No accounts found.")
@@ -25,7 +24,7 @@ def cmd_list(args):
     print(f"\nTotal accounts: {len(accounts)}")
 
 
-def cmd_create(args):
+def cmd_create(args, services):
     """Interactively create a new account."""
     available_types = get_available_modules()
 
@@ -56,7 +55,7 @@ def cmd_create(args):
 
     # Create account via service
     try:
-        account = account_service.create(name, account_type, description)
+        account = services.accounts.create(name, account_type, description)
 
         print(f"\n✓ Account created successfully with ID: {account.id}")
         print(f"  Name: {account.name}")
