@@ -1,0 +1,14 @@
+-- Create transactions table
+CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY,
+    account_id INTEGER NOT NULL,
+    transaction_date DATE NOT NULL,
+    post_date DATE,
+    description TEXT NOT NULL,
+    category TEXT,
+    amount REAL NOT NULL,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('credit', 'debit')),
+    additional_metadata TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+);
