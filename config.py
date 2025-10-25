@@ -18,6 +18,8 @@ class Config:
     db_filename: str
     log_level: str
     log_dir: Path
+    archive_enabled: bool
+    archive_dir: Path
 
     @property
     def db_path(self) -> Path:
@@ -35,6 +37,8 @@ class Config:
             db_filename="necker.db",
             log_level="INFO",
             log_dir=base_dir / "logs",
+            archive_enabled=True,
+            archive_dir=base_dir / "archives",
         )
 
 
@@ -80,12 +84,18 @@ def load_config() -> Config:
     log_level = log_config.get("level", "INFO")
     log_dir = Path(log_config.get("log_dir", base_dir / "logs"))
 
+    archive_config = data.get("archive", {})
+    archive_enabled = archive_config.get("enabled", True)
+    archive_dir = Path(archive_config.get("archive_dir", base_dir / "archives"))
+
     return Config(
         base_dir=base_dir,
         db_data_dir=db_data_dir,
         db_filename=db_filename,
         log_level=log_level,
         log_dir=log_dir,
+        archive_enabled=archive_enabled,
+        archive_dir=archive_dir,
     )
 
 
@@ -110,6 +120,10 @@ def _write_config(config: Config) -> None:
         "logging": {
             "level": config.log_level,
             "log_dir": str(config.log_dir),
+        },
+        "archive": {
+            "enabled": config.archive_enabled,
+            "archive_dir": str(config.archive_dir),
         },
     }
 

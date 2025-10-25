@@ -252,8 +252,6 @@ _INGESTION_MODULES = {
   our "data" location and create a record in the db. For example, we
   can create a model "imports(account_name, filename, import_date,
   results)"
-- Logging: Everything should be logged to a file and selective things
-  to be logged to console/printed
 - Unit tests
 - The first time we encounter an import with the header check failing,
   we should refactor to make that more robust

@@ -29,6 +29,8 @@ class Services:
         # Lazy import to avoid circular dependencies
         from services.accounts import AccountService
         from services.transactions import TransactionService
+        from services.data_imports import DataImportService
 
         self.accounts = AccountService(self.db_manager)
         self.transactions = TransactionService(self.db_manager)
+        self.data_imports = DataImportService(self.db_manager)

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
+import gzip
+import shutil
 from pathlib import Path
+from datetime import datetime
 from ingestion import get_ingestion_module
 from logger import get_logger
 
@@ -52,6 +55,34 @@ def cmd_ingest(args, services):
         if not transactions:
             logger.info("No transactions to import.")
             return
+
+        # Archive the CSV file if enabled
+        archive_filename = None
+        config = services.config
+        if config.archive_enabled:
+            # Create archive directory if it doesn't exist
+            config.archive_dir.mkdir(parents=True, exist_ok=True)
+
+            # Generate archive filename: {account_name}_{timestamp}_{original_filename}.gz
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            original_filename = csv_path.name
+            archive_filename = f"{account.name}_{timestamp}_{original_filename}.gz"
+            archive_path = config.archive_dir / archive_filename
+
+            # Gzip and copy the file
+            with open(csv_path, "rb") as f_in:
+                with gzip.open(archive_path, "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+
+            logger.info(f"Archived CSV to: {archive_path}")
+
+        # Create DataImport record
+        data_import = services.data_imports.create(account.id, archive_filename)
+        logger.info(f"Created data import record (ID: {data_import.id})")
+
+        # Set data_import_id on all transactions
+        for transaction in transactions:
+            transaction.data_import_id = data_import.id
 
         # Bulk insert transactions
         inserted_count = services.transactions.bulk_create(transactions)

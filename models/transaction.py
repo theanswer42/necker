@@ -17,6 +17,9 @@ class Transaction:
     amount: Decimal  # always positive
     type: str  # 'income', 'expense', or 'transfer'
     additional_metadata: Optional[dict] = None
+    data_import_id: int = (
+        0  # reference to the data import operation (set during ingestion)
+    )
 
     @classmethod
     def create_with_checksum(

@@ -34,14 +34,15 @@ class TransactionService:
             conn.execute(
                 """
                 INSERT INTO transactions (
-                    id, account_id, transaction_date, post_date,
+                    id, account_id, data_import_id, transaction_date, post_date,
                     description, category, amount, transaction_type,
                     additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     transaction.id,
                     transaction.account_id,
+                    transaction.data_import_id,
                     transaction.transaction_date.isoformat(),
                     (
                         transaction.post_date.isoformat()
@@ -84,6 +85,7 @@ class TransactionService:
                 (
                     t.id,
                     t.account_id,
+                    t.data_import_id,
                     t.transaction_date.isoformat(),
                     t.post_date.isoformat() if t.post_date else None,
                     t.description,
@@ -101,10 +103,10 @@ class TransactionService:
             conn.executemany(
                 """
                 INSERT OR IGNORE INTO transactions (
-                    id, account_id, transaction_date, post_date,
+                    id, account_id, data_import_id, transaction_date, post_date,
                     description, category, amount, transaction_type,
                     additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 data,
             )
@@ -125,7 +127,7 @@ class TransactionService:
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
                 """
-                SELECT id, account_id, transaction_date, post_date,
+                SELECT id, account_id, data_import_id, transaction_date, post_date,
                        description, category, amount, transaction_type,
                        additional_metadata
                 FROM transactions
@@ -150,7 +152,7 @@ class TransactionService:
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
                 """
-                SELECT id, account_id, transaction_date, post_date,
+                SELECT id, account_id, data_import_id, transaction_date, post_date,
                        description, category, amount, transaction_type,
                        additional_metadata
                 FROM transactions
@@ -169,11 +171,12 @@ class TransactionService:
         return Transaction(
             id=row[0],
             account_id=row[1],
-            transaction_date=date.fromisoformat(row[2]),
-            post_date=date.fromisoformat(row[3]) if row[3] else None,
-            description=row[4],
-            category=row[5],
-            amount=Decimal(str(row[6])),
-            type=row[7],
-            additional_metadata=json.loads(row[8]) if row[8] else None,
+            transaction_date=date.fromisoformat(row[3]),
+            post_date=date.fromisoformat(row[4]) if row[4] else None,
+            description=row[5],
+            category=row[6],
+            amount=Decimal(str(row[7])),
+            type=row[8],
+            additional_metadata=json.loads(row[9]) if row[9] else None,
+            data_import_id=row[2],
         )
