@@ -3,6 +3,9 @@
 import sys
 from pathlib import Path
 from ingestion import get_ingestion_module
+from logger import get_logger
+
+logger = get_logger()
 
 
 def cmd_ingest(args, services):
@@ -15,26 +18,28 @@ def cmd_ingest(args, services):
     # Validate CSV file exists
     csv_path = Path(args.csv_file)
     if not csv_path.exists():
-        print(f"Error: File not found: {args.csv_file}")
+        logger.error(f"File not found: {args.csv_file}")
         sys.exit(1)
 
     # Look up account by name
     account = services.accounts.find_by_name(args.account_name)
     if not account:
-        print(f"Error: Account '{args.account_name}' not found.")
-        print("\nUse 'python -m cli accounts list' to see available accounts.")
+        logger.error(f"Account '{args.account_name}' not found.")
+        logger.info("Use 'python -m cli accounts list' to see available accounts.")
         sys.exit(1)
 
-    print(f"Ingesting transactions for account: {account.name} (ID: {account.id})")
-    print(f"Account type: {account.type}")
-    print(f"CSV file: {args.csv_file}")
-    print("-" * 80)
+    logger.info(
+        f"Ingesting transactions for account: {account.name} (ID: {account.id})"
+    )
+    logger.info(f"Account type: {account.type}")
+    logger.info(f"CSV file: {args.csv_file}")
+    logger.info("-" * 80)
 
     # Get the ingestion module for this account type
     try:
         ingestion_module = get_ingestion_module(account.type)
     except ValueError as e:
-        print(f"Error: {e}")
+        logger.error(str(e))
         sys.exit(1)
 
     # Ingest transactions from CSV
@@ -42,23 +47,23 @@ def cmd_ingest(args, services):
         with open(csv_path, "r") as f:
             transactions = ingestion_module.ingest(f, account.id)
 
-        print(f"\nParsed {len(transactions)} transactions from CSV")
+        logger.info(f"\nParsed {len(transactions)} transactions from CSV")
 
         if not transactions:
-            print("No transactions to import.")
+            logger.info("No transactions to import.")
             return
 
         # Bulk insert transactions
         inserted_count = services.transactions.bulk_create(transactions)
 
-        print(f"✓ Successfully inserted {inserted_count} transactions")
+        logger.info(f"✓ Successfully inserted {inserted_count} transactions")
 
         if inserted_count < len(transactions):
             skipped = len(transactions) - inserted_count
-            print(f"  ({skipped} duplicate transaction(s) skipped)")
+            logger.info(f"  ({skipped} duplicate transaction(s) skipped)")
 
     except Exception as e:
-        print(f"\nError during ingestion: {e}")
+        logger.error(f"Error during ingestion: {e}")
         sys.exit(1)
 
 

@@ -2,6 +2,9 @@
 
 import sys
 from ingestion import get_available_modules
+from logger import get_logger
+
+logger = get_logger()
 
 
 def cmd_list(args, services):
@@ -9,19 +12,19 @@ def cmd_list(args, services):
     accounts = services.accounts.find_all()
 
     if not accounts:
-        print("No accounts found.")
+        logger.info("No accounts found.")
         return
 
-    print("\nAccounts:")
-    print("=" * 80)
+    logger.info("\nAccounts:")
+    logger.info("=" * 80)
     for account in accounts:
-        print(f"ID: {account.id}")
-        print(f"Name: {account.name}")
-        print(f"Type: {account.type}")
-        print(f"Description: {account.description}")
-        print("-" * 80)
+        logger.info(f"ID: {account.id}")
+        logger.info(f"Name: {account.name}")
+        logger.info(f"Type: {account.type}")
+        logger.info(f"Description: {account.description}")
+        logger.info("-" * 80)
 
-    print(f"\nTotal accounts: {len(accounts)}")
+    logger.info(f"\nTotal accounts: {len(accounts)}")
 
 
 def cmd_create(args, services):
@@ -34,15 +37,15 @@ def cmd_create(args, services):
     # Get account name
     name = input("Account name (e.g., bofa_checking): ").strip()
     if not name:
-        print("Error: Account name cannot be empty.")
+        logger.error("Account name cannot be empty.")
         sys.exit(1)
 
     # Get account type
     print(f"\nAvailable account types: {', '.join(available_types)}")
     account_type = input("Account type: ").strip()
     if account_type not in available_types:
-        print(f"Error: Invalid account type '{account_type}'.")
-        print(f"Must be one of: {', '.join(available_types)}")
+        logger.error(f"Invalid account type '{account_type}'.")
+        logger.error(f"Must be one of: {', '.join(available_types)}")
         sys.exit(1)
 
     # Get description
@@ -50,20 +53,20 @@ def cmd_create(args, services):
         "Description (e.g., Bank of America Checking Account): "
     ).strip()
     if not description:
-        print("Error: Description cannot be empty.")
+        logger.error("Description cannot be empty.")
         sys.exit(1)
 
     # Create account via service
     try:
         account = services.accounts.create(name, account_type, description)
 
-        print(f"\n✓ Account created successfully with ID: {account.id}")
-        print(f"  Name: {account.name}")
-        print(f"  Type: {account.type}")
-        print(f"  Description: {account.description}")
+        logger.info(f"\n✓ Account created successfully with ID: {account.id}")
+        logger.info(f"  Name: {account.name}")
+        logger.info(f"  Type: {account.type}")
+        logger.info(f"  Description: {account.description}")
 
     except Exception as e:
-        print(f"\nError creating account: {e}")
+        logger.error(f"Error creating account: {e}")
         sys.exit(1)
 
 

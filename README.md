@@ -248,8 +248,6 @@ _INGESTION_MODULES = {
 ```
 
 ## TODO
-- Move to using a config file rather than .env since this is a local
-  application.
 - Track every imported csv - when we import, we should save the csv in
   our "data" location and create a record in the db. For example, we
   can create a model "imports(account_name, filename, import_date,

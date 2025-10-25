@@ -13,13 +13,29 @@ import tomli_w
 class Config:
     """Application configuration."""
 
-    db_path: Path
+    base_dir: Path
+    db_data_dir: Path
+    db_filename: str
+    log_level: str
+    log_dir: Path
+
+    @property
+    def db_path(self) -> Path:
+        """Get the full database path (data_dir/filename)."""
+        return self.db_data_dir / self.db_filename
 
     @classmethod
     def default(cls) -> "Config":
         """Create a Config with default values."""
         home = Path.home()
-        return cls(db_path=home / "data" / "necker" / "db" / "necker.db")
+        base_dir = home / "data" / "necker"
+        return cls(
+            base_dir=base_dir,
+            db_data_dir=base_dir / "db",
+            db_filename="necker.db",
+            log_level="INFO",
+            log_dir=base_dir / "logs",
+        )
 
 
 def get_config_path() -> Path:
@@ -53,7 +69,24 @@ def load_config() -> Config:
     with open(config_path, "rb") as f:
         data = tomllib.load(f)
 
-    return Config(db_path=Path(data["database"]["path"]))
+    # Parse with defaults for any missing values
+    base_dir = Path(data.get("base_dir", Path.home() / "data" / "necker"))
+
+    db_config = data.get("database", {})
+    db_data_dir = Path(db_config.get("data_dir", base_dir / "db"))
+    db_filename = db_config.get("filename", "necker.db")
+
+    log_config = data.get("logging", {})
+    log_level = log_config.get("level", "INFO")
+    log_dir = Path(log_config.get("log_dir", base_dir / "logs"))
+
+    return Config(
+        base_dir=base_dir,
+        db_data_dir=db_data_dir,
+        db_filename=db_filename,
+        log_level=log_level,
+        log_dir=log_dir,
+    )
 
 
 def _write_config(config: Config) -> None:
@@ -68,10 +101,18 @@ def _write_config(config: Config) -> None:
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Convert config to TOML structure
-    data = {"database": {"path": str(config.db_path)}}
+    data = {
+        "base_dir": str(config.base_dir),
+        "database": {
+            "data_dir": str(config.db_data_dir),
+            "filename": config.db_filename,
+        },
+        "logging": {
+            "level": config.log_level,
+            "log_dir": str(config.log_dir),
+        },
+    }
 
     # Write TOML file
     with open(config_path, "wb") as f:
         tomli_w.dump(data, f)
-
-    print(f"Created default config file at: {config_path}")

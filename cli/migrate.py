@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+from logger import get_logger
+
+logger = get_logger()
+
 
 def init_schema_migrations_table(conn):
     conn.execute("""
@@ -44,10 +48,10 @@ def apply_migration(conn, migration_file, db_manager):
             (migration_file,),
         )
         conn.commit()
-        print(f"Applied migration: {migration_file}")
+        logger.info(f"Applied migration: {migration_file}")
     except Exception as e:
         conn.rollback()
-        print(f"Error applying migration {migration_file}: {e}")
+        logger.error(f"Error applying migration {migration_file}: {e}")
         raise
 
 
@@ -56,7 +60,7 @@ def cmd_status(args, db_manager):
     db_path = db_manager.get_db_path()
 
     if not db_path.exists():
-        print(
+        logger.info(
             "Database does not exist. Run 'python -m cli migrate apply' to create it."
         )
         return
@@ -66,21 +70,21 @@ def cmd_status(args, db_manager):
         applied = get_applied_migrations(conn)
         available = get_available_migrations(db_manager)
 
-        print("Migration Status:")
-        print("================")
+        logger.info("Migration Status:")
+        logger.info("================")
 
         if not available:
-            print("No migrations found.")
+            logger.info("No migrations found.")
             return
 
         for migration in available:
             status_text = "APPLIED" if migration in applied else "PENDING"
-            print(f"{migration}: {status_text}")
+            logger.info(f"{migration}: {status_text}")
 
         pending_count = len([m for m in available if m not in applied])
-        print(f"\nTotal migrations: {len(available)}")
-        print(f"Applied: {len(applied)}")
-        print(f"Pending: {pending_count}")
+        logger.info(f"\nTotal migrations: {len(available)}")
+        logger.info(f"Applied: {len(applied)}")
+        logger.info(f"Pending: {pending_count}")
 
 
 def cmd_apply(args, db_manager):
@@ -93,15 +97,15 @@ def cmd_apply(args, db_manager):
         pending = [m for m in available if m not in applied]
 
         if not pending:
-            print("No pending migrations.")
+            logger.info("No pending migrations.")
             return
 
-        print(f"Applying {len(pending)} migration(s)...")
+        logger.info(f"Applying {len(pending)} migration(s)...")
 
         for migration in pending:
             apply_migration(conn, migration, db_manager)
 
-        print(f"Successfully applied {len(pending)} migration(s).")
+        logger.info(f"Successfully applied {len(pending)} migration(s).")
 
 
 def setup_parser(subparsers):

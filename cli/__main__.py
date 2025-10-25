@@ -24,6 +24,7 @@ from cli import accounts, transactions, migrate
 from config import load_config
 from services.base import Services
 from db.manager import DatabaseManager
+from logger import setup_logging
 
 
 def main():
@@ -55,6 +56,9 @@ def main():
         try:
             # Load configuration
             config = load_config()
+
+            # Set up logging
+            setup_logging(config)
 
             # Create services container for dependency injection
             services = Services(config)
