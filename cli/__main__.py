@@ -21,7 +21,9 @@ Examples:
 import sys
 import argparse
 from cli import accounts, transactions, migrate
+from config import load_config
 from services.base import Services
+from db.manager import DatabaseManager
 
 
 def main():
@@ -51,13 +53,20 @@ def main():
     # Call the appropriate handler function
     if hasattr(args, "func"):
         try:
+            # Load configuration
+            config = load_config()
+
             # Create services container for dependency injection
-            services = Services()
+            services = Services(config)
 
             # Commands that use services: accounts, transactions
-            # Commands that don't: migrate (uses db_manager directly)
+            # Commands that use db_manager directly: migrate
             if args.command in ("accounts", "transactions"):
                 args.func(args, services)
+            elif args.command == "migrate":
+                # Migrate commands need db_manager for raw database operations
+                db_manager = DatabaseManager(config)
+                args.func(args, db_manager)
             else:
                 args.func(args)
         except Exception as e:

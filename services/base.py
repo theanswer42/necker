@@ -1,6 +1,7 @@
 """Base services container for dependency injection."""
 
-from db import manager as dbmgr
+from config import Config
+from db.manager import DatabaseManager
 
 
 class Services:
@@ -10,17 +11,20 @@ class Services:
     it easy to inject mock services for testing.
 
     Args:
-        db_manager: Database manager instance. Defaults to the global dbmgr.
+        config: Application configuration object.
+        db_manager: Optional database manager for testing. If provided, config is ignored.
     """
 
-    def __init__(self, db_manager=None):
-        """Initialize services with optional database manager.
+    def __init__(self, config: Config, db_manager=None):
+        """Initialize services with configuration.
 
         Args:
-            db_manager: Optional database manager for dependency injection.
-                       If None, uses the default global dbmgr.
+            config: Config object containing application configuration.
+            db_manager: Optional database manager for dependency injection (testing).
+                       If None, creates DatabaseManager from config.
         """
-        self.db_manager = db_manager or dbmgr
+        self.config = config
+        self.db_manager = db_manager or DatabaseManager(config)
 
         # Lazy import to avoid circular dependencies
         from services.accounts import AccountService

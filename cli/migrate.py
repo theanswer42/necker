@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from db import manager as dbmgr
-
 
 def init_schema_migrations_table(conn):
     conn.execute("""
@@ -20,8 +18,8 @@ def get_applied_migrations(conn):
     return {row[0] for row in cursor.fetchall()}
 
 
-def get_available_migrations():
-    migrations_dir = dbmgr.get_migrations_dir()
+def get_available_migrations(db_manager):
+    migrations_dir = db_manager.get_migrations_dir()
     if not migrations_dir.exists():
         return []
 
@@ -32,8 +30,8 @@ def get_available_migrations():
     return sorted(migrations)
 
 
-def apply_migration(conn, migration_file):
-    migrations_dir = dbmgr.get_migrations_dir()
+def apply_migration(conn, migration_file, db_manager):
+    migrations_dir = db_manager.get_migrations_dir()
     migration_path = migrations_dir / migration_file
 
     with open(migration_path, "r") as f:
@@ -53,9 +51,9 @@ def apply_migration(conn, migration_file):
         raise
 
 
-def cmd_status(args):
+def cmd_status(args, db_manager):
     """Show migration status."""
-    db_path = dbmgr.get_db_path()
+    db_path = db_manager.get_db_path()
 
     if not db_path.exists():
         print(
@@ -63,10 +61,10 @@ def cmd_status(args):
         )
         return
 
-    with dbmgr.connect() as conn:
+    with db_manager.connect() as conn:
         init_schema_migrations_table(conn)
         applied = get_applied_migrations(conn)
-        available = get_available_migrations()
+        available = get_available_migrations(db_manager)
 
         print("Migration Status:")
         print("================")
@@ -85,12 +83,12 @@ def cmd_status(args):
         print(f"Pending: {pending_count}")
 
 
-def cmd_apply(args):
+def cmd_apply(args, db_manager):
     """Apply pending migrations."""
-    with dbmgr.connect() as conn:
+    with db_manager.connect() as conn:
         init_schema_migrations_table(conn)
         applied = get_applied_migrations(conn)
-        available = get_available_migrations()
+        available = get_available_migrations(db_manager)
 
         pending = [m for m in available if m not in applied]
 
@@ -101,7 +99,7 @@ def cmd_apply(args):
         print(f"Applying {len(pending)} migration(s)...")
 
         for migration in pending:
-            apply_migration(conn, migration)
+            apply_migration(conn, migration, db_manager)
 
         print(f"Successfully applied {len(pending)} migration(s).")
 
