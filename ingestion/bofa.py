@@ -70,7 +70,7 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
         transaction_date=transaction_date,
         post_date=None,  # BoFA CSV doesn't have separate post date
         description=description,
-        category=None,  # BoFA CSV doesn't include category
+        bank_category=None,  # BoFA CSV doesn't include category
         amount=amount,
         type=transaction_type,
         additional_metadata=additional_metadata,

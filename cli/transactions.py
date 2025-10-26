@@ -98,6 +98,59 @@ def cmd_ingest(args, services):
         sys.exit(1)
 
 
+def cmd_set_category(args, services):
+    """Set the category for a transaction.
+
+    Args:
+        args: Parsed command-line arguments with transaction_id and category
+        services: Services container with transactions and categories services
+    """
+    transaction_id = args.transaction_id
+    category_input = args.category
+
+    # Look up transaction
+    transaction = services.transactions.find(transaction_id)
+    if not transaction:
+        logger.error(f"Transaction with ID '{transaction_id}' not found.")
+        sys.exit(1)
+
+    # Look up category (try as ID first, then by name)
+    category = None
+    try:
+        category_id = int(category_input)
+        category = services.categories.find(category_id)
+    except ValueError:
+        # Not a number, try as category name
+        category = services.categories.find_by_name(category_input)
+
+    if not category:
+        logger.error(f"Category '{category_input}' not found.")
+        logger.info("Use 'python -m cli categories list' to see available categories.")
+        sys.exit(1)
+
+    # Update transaction category_id
+    try:
+        # We need to update the transaction in the database
+        with services.db_manager.connect() as conn:
+            cursor = conn.execute(
+                "UPDATE transactions SET category_id = ? WHERE id = ?",
+                (category.id, transaction_id),
+            )
+            conn.commit()
+
+            if cursor.rowcount == 0:
+                logger.error("Failed to update transaction.")
+                sys.exit(1)
+
+        logger.info("✓ Transaction categorized successfully")
+        logger.info(f"  Transaction: {transaction.description[:50]}...")
+        logger.info(f"  Category: {category.name}")
+
+    except Exception as e:
+        logger.error(f"Error updating transaction: {e}")
+        sys.exit(1)
+
+
 def setup_parser(subparsers):
     """Setup transactions subcommand parser.
 
@@ -138,3 +191,19 @@ Examples:
         help="Name of the account to import transactions for",
     )
     ingest_parser.set_defaults(func=cmd_ingest)
+
+    # transactions set-category
+    set_category_parser = transactions_subparsers.add_parser(
+        "set-category",
+        help="Set category for a transaction",
+        description="Assign a user-defined category to a transaction",
+    )
+    set_category_parser.add_argument(
+        "transaction_id",
+        help="Transaction ID (SHA256 hash)",
+    )
+    set_category_parser.add_argument(
+        "category",
+        help="Category name or ID",
+    )
+    set_category_parser.set_defaults(func=cmd_set_category)

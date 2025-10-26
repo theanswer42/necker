@@ -35,9 +35,9 @@ class TransactionService:
                 """
                 INSERT INTO transactions (
                     id, account_id, data_import_id, transaction_date, post_date,
-                    description, category, amount, transaction_type,
+                    description, bank_category, category_id, amount, transaction_type,
                     additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     transaction.id,
@@ -50,7 +50,8 @@ class TransactionService:
                         else None
                     ),
                     transaction.description,
-                    transaction.category,
+                    transaction.bank_category,
+                    transaction.category_id,
                     float(transaction.amount),
                     transaction.type,
                     (
@@ -89,7 +90,8 @@ class TransactionService:
                     t.transaction_date.isoformat(),
                     t.post_date.isoformat() if t.post_date else None,
                     t.description,
-                    t.category,
+                    t.bank_category,
+                    t.category_id,
                     float(t.amount),
                     t.type,
                     json.dumps(t.additional_metadata)
@@ -104,9 +106,9 @@ class TransactionService:
                 """
                 INSERT OR IGNORE INTO transactions (
                     id, account_id, data_import_id, transaction_date, post_date,
-                    description, category, amount, transaction_type,
+                    description, bank_category, category_id, amount, transaction_type,
                     additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 data,
             )
@@ -128,7 +130,7 @@ class TransactionService:
             cursor = conn.execute(
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, category, amount, transaction_type,
+                       description, bank_category, category_id, amount, transaction_type,
                        additional_metadata
                 FROM transactions
                 WHERE account_id = ?
@@ -153,7 +155,7 @@ class TransactionService:
             cursor = conn.execute(
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, category, amount, transaction_type,
+                       description, bank_category, category_id, amount, transaction_type,
                        additional_metadata
                 FROM transactions
                 WHERE id = ?
@@ -174,9 +176,10 @@ class TransactionService:
             transaction_date=date.fromisoformat(row[3]),
             post_date=date.fromisoformat(row[4]) if row[4] else None,
             description=row[5],
-            category=row[6],
-            amount=Decimal(str(row[7])),
-            type=row[8],
-            additional_metadata=json.loads(row[9]) if row[9] else None,
+            bank_category=row[6],
+            amount=Decimal(str(row[8])),
+            type=row[9],
+            additional_metadata=json.loads(row[10]) if row[10] else None,
             data_import_id=row[2],
+            category_id=row[7],
         )

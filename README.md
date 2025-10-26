@@ -248,10 +248,8 @@ _INGESTION_MODULES = {
 ```
 
 ## TODO
-- Track every imported csv - when we import, we should save the csv in
-  our "data" location and create a record in the db. For example, we
-  can create a model "imports(account_name, filename, import_date,
-  results)"
+- Ability to categorize transactions
+- start building the tools layer
 - Unit tests
 - The first time we encounter an import with the header check failing,
   we should refactor to make that more robust

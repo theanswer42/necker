@@ -96,7 +96,7 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
         transaction_date=transaction_date,
         post_date=None,  # AMEX CSV doesn't have separate post date
         description=description,
-        category=category if category else None,
+        bank_category=category if category else None,
         amount=amount,
         type=transaction_type,
         additional_metadata=additional_metadata if additional_metadata else None,

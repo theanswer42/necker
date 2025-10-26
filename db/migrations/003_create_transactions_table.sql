@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     transaction_date DATE NOT NULL,
     post_date DATE,
     description TEXT NOT NULL,
-    category TEXT,
+    bank_category TEXT,
+    category_id INTEGER,
     amount REAL NOT NULL,
     transaction_type TEXT NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer')),
     additional_metadata TEXT,
@@ -14,3 +15,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (account_id) REFERENCES accounts(id),
     FOREIGN KEY (data_import_id) REFERENCES data_imports(id) ON DELETE CASCADE
 );
+
+-- Index for category lookups
+CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id);

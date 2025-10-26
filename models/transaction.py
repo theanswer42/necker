@@ -13,13 +13,14 @@ class Transaction:
     transaction_date: date
     post_date: Optional[date]
     description: str
-    category: Optional[str]
+    bank_category: Optional[str]  # category from bank/CSV import
     amount: Decimal  # always positive
     type: str  # 'income', 'expense', or 'transfer'
     additional_metadata: Optional[dict] = None
     data_import_id: int = (
         0  # reference to the data import operation (set during ingestion)
     )
+    category_id: Optional[int] = None  # user-defined category
 
     @classmethod
     def create_with_checksum(
@@ -29,7 +30,7 @@ class Transaction:
         transaction_date: date,
         post_date: Optional[date],
         description: str,
-        category: Optional[str],
+        bank_category: Optional[str],
         amount: Decimal,
         type: str,
         additional_metadata: Optional[dict] = None,
@@ -42,7 +43,7 @@ class Transaction:
             transaction_date=transaction_date,
             post_date=post_date,
             description=description,
-            category=category,
+            bank_category=bank_category,
             amount=amount,
             type=type,
             additional_metadata=additional_metadata,
@@ -56,7 +57,8 @@ class Transaction:
             "transaction_date": self.transaction_date.isoformat(),
             "post_date": self.post_date.isoformat() if self.post_date else None,
             "description": self.description,
-            "category": self.category,
+            "bank_category": self.bank_category,
+            "category_id": self.category_id,
             "amount": float(self.amount),
             "transaction_type": self.type,
             "raw_data": None,  # Will be set by ingestion module
