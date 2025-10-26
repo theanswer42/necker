@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from ingestion import get_ingestion_module
+from categorization import auto_categorize
 from logger import get_logger
 
 logger = get_logger()
@@ -92,6 +93,53 @@ def cmd_ingest(args, services):
         if inserted_count < len(transactions):
             skipped = len(transactions) - inserted_count
             logger.info(f"  ({skipped} duplicate transaction(s) skipped)")
+
+        # Auto-categorize newly inserted transactions
+        # This should never fail the ingest process
+        if inserted_count > 0:
+            try:
+                logger.info("\nRunning auto-categorization...")
+
+                # Get historical transactions for training (last 90 days, manually categorized)
+                historical_transactions = (
+                    services.transactions.find_historical_for_categorization(
+                        account.id, days=90
+                    )
+                )
+                logger.info(
+                    f"Found {len(historical_transactions)} historical categorized transactions"
+                )
+
+                # Get all available categories
+                categories = services.categories.find_all()
+                logger.info(f"Using {len(categories)} available categories")
+
+                # Run auto-categorization
+                categorized_transactions = auto_categorize(
+                    transactions, categories, historical_transactions
+                )
+
+                # Update transactions with auto_category_id
+                # Only update transactions that have auto_category_id set
+                to_update = [
+                    t
+                    for t in categorized_transactions
+                    if t.auto_category_id is not None
+                ]
+
+                if to_update:
+                    updated_count = services.transactions.batch_update_auto_categories(
+                        to_update
+                    )
+                    logger.info(f"✓ Auto-categorized {updated_count} transaction(s)")
+                else:
+                    logger.info("No transactions were auto-categorized")
+
+            except Exception as e:
+                # Log error but don't fail the ingest
+                logger.warning(
+                    f"Auto-categorization failed (ingest was successful): {e}"
+                )
 
     except Exception as e:
         logger.error(f"Error during ingestion: {e}")

@@ -21,6 +21,7 @@ class Transaction:
         0  # reference to the data import operation (set during ingestion)
     )
     category_id: Optional[int] = None  # user-defined category
+    auto_category_id: Optional[int] = None  # LLM-suggested category
 
     @classmethod
     def create_with_checksum(
@@ -59,6 +60,7 @@ class Transaction:
             "description": self.description,
             "bank_category": self.bank_category,
             "category_id": self.category_id,
+            "auto_category_id": self.auto_category_id,
             "amount": float(self.amount),
             "transaction_type": self.type,
             "raw_data": None,  # Will be set by ingestion module

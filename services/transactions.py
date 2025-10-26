@@ -2,7 +2,7 @@
 
 import json
 from typing import List, Optional
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from models.transaction import Transaction
 
@@ -35,9 +35,9 @@ class TransactionService:
                 """
                 INSERT INTO transactions (
                     id, account_id, data_import_id, transaction_date, post_date,
-                    description, bank_category, category_id, amount, transaction_type,
+                    description, bank_category, category_id, auto_category_id, amount, transaction_type,
                     additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     transaction.id,
@@ -52,6 +52,7 @@ class TransactionService:
                     transaction.description,
                     transaction.bank_category,
                     transaction.category_id,
+                    transaction.auto_category_id,
                     float(transaction.amount),
                     transaction.type,
                     (
@@ -92,6 +93,7 @@ class TransactionService:
                     t.description,
                     t.bank_category,
                     t.category_id,
+                    t.auto_category_id,
                     float(t.amount),
                     t.type,
                     json.dumps(t.additional_metadata)
@@ -106,15 +108,48 @@ class TransactionService:
                 """
                 INSERT OR IGNORE INTO transactions (
                     id, account_id, data_import_id, transaction_date, post_date,
-                    description, bank_category, category_id, amount, transaction_type,
+                    description, bank_category, category_id, auto_category_id, amount, transaction_type,
                     additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 data,
             )
             conn.commit()
 
             # Return count of inserted rows
+            return conn.total_changes
+
+    def batch_update_auto_categories(self, transactions: List[Transaction]) -> int:
+        """Update auto_category_id for multiple transactions.
+
+        Args:
+            transactions: List of Transaction objects with auto_category_id set.
+
+        Returns:
+            Number of transactions successfully updated.
+
+        Raises:
+            Exception: If batch update fails. All updates are rolled back on error.
+        """
+        if not transactions:
+            return 0
+
+        with self.db_manager.connect() as conn:
+            # Prepare update data (auto_category_id, transaction_id)
+            data = [(t.auto_category_id, t.id) for t in transactions]
+
+            # Execute batch update
+            conn.executemany(
+                """
+                UPDATE transactions
+                SET auto_category_id = ?
+                WHERE id = ?
+                """,
+                data,
+            )
+            conn.commit()
+
+            # Return count of updated rows
             return conn.total_changes
 
     def find_by_account(self, account_id: int) -> List[Transaction]:
@@ -130,13 +165,49 @@ class TransactionService:
             cursor = conn.execute(
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, bank_category, category_id, amount, transaction_type,
+                       description, bank_category, category_id, auto_category_id, amount, transaction_type,
                        additional_metadata
                 FROM transactions
                 WHERE account_id = ?
                 ORDER BY transaction_date DESC, id
                 """,
                 (account_id,),
+            )
+            rows = cursor.fetchall()
+
+            return [self._row_to_transaction(row) for row in rows]
+
+    def find_historical_for_categorization(
+        self, account_id: int, days: int = 90
+    ) -> List[Transaction]:
+        """Get historical categorized transactions for use in auto-categorization.
+
+        Fetches transactions from the specified account that:
+        - Are within the last N days
+        - Have a manually-set category (category_id is not NULL)
+
+        Args:
+            account_id: The account ID to filter by.
+            days: Number of days to look back (default 90).
+
+        Returns:
+            List of Transaction objects with manual categories, ordered by date (newest first).
+        """
+        cutoff_date = (date.today() - timedelta(days=days)).isoformat()
+
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                """
+                SELECT id, account_id, data_import_id, transaction_date, post_date,
+                       description, bank_category, category_id, auto_category_id, amount, transaction_type,
+                       additional_metadata
+                FROM transactions
+                WHERE account_id = ?
+                  AND category_id IS NOT NULL
+                  AND transaction_date >= ?
+                ORDER BY transaction_date DESC, id
+                """,
+                (account_id, cutoff_date),
             )
             rows = cursor.fetchall()
 
@@ -155,7 +226,7 @@ class TransactionService:
             cursor = conn.execute(
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, bank_category, category_id, amount, transaction_type,
+                       description, bank_category, category_id, auto_category_id, amount, transaction_type,
                        additional_metadata
                 FROM transactions
                 WHERE id = ?
@@ -177,9 +248,10 @@ class TransactionService:
             post_date=date.fromisoformat(row[4]) if row[4] else None,
             description=row[5],
             bank_category=row[6],
-            amount=Decimal(str(row[8])),
-            type=row[9],
-            additional_metadata=json.loads(row[10]) if row[10] else None,
+            amount=Decimal(str(row[9])),
+            type=row[10],
+            additional_metadata=json.loads(row[11]) if row[11] else None,
             data_import_id=row[2],
             category_id=row[7],
+            auto_category_id=row[8],
         )

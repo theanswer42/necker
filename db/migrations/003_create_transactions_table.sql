@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     description TEXT NOT NULL,
     bank_category TEXT,
     category_id INTEGER,
+    auto_category_id INTEGER,
     amount REAL NOT NULL,
     transaction_type TEXT NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer')),
     additional_metadata TEXT,
@@ -18,3 +19,4 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 -- Index for category lookups
 CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_auto_category_id ON transactions(auto_category_id);
