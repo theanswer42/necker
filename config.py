@@ -20,6 +20,11 @@ class Config:
     log_dir: Path
     archive_enabled: bool
     archive_dir: Path
+    # LLM settings
+    llm_enabled: bool
+    llm_provider: str  # "openai", "ollama", etc.
+    llm_openai_api_key: str
+    llm_openai_model: str
 
     @property
     def db_path(self) -> Path:
@@ -39,6 +44,10 @@ class Config:
             log_dir=base_dir / "logs",
             archive_enabled=True,
             archive_dir=base_dir / "archives",
+            llm_enabled=False,
+            llm_provider="openai",
+            llm_openai_api_key="",
+            llm_openai_model="gpt-4o-mini",
         )
 
 
@@ -88,6 +97,14 @@ def load_config() -> Config:
     archive_enabled = archive_config.get("enabled", True)
     archive_dir = Path(archive_config.get("archive_dir", base_dir / "archives"))
 
+    llm_config = data.get("llm", {})
+    llm_enabled = llm_config.get("enabled", False)
+    llm_provider = llm_config.get("provider", "openai")
+
+    openai_config = llm_config.get("openai", {})
+    llm_openai_api_key = openai_config.get("api_key", "")
+    llm_openai_model = openai_config.get("model", "gpt-4o-mini")
+
     return Config(
         base_dir=base_dir,
         db_data_dir=db_data_dir,
@@ -96,6 +113,10 @@ def load_config() -> Config:
         log_dir=log_dir,
         archive_enabled=archive_enabled,
         archive_dir=archive_dir,
+        llm_enabled=llm_enabled,
+        llm_provider=llm_provider,
+        llm_openai_api_key=llm_openai_api_key,
+        llm_openai_model=llm_openai_model,
     )
 
 
@@ -124,6 +145,14 @@ def _write_config(config: Config) -> None:
         "archive": {
             "enabled": config.archive_enabled,
             "archive_dir": str(config.archive_dir),
+        },
+        "llm": {
+            "enabled": config.llm_enabled,
+            "provider": config.llm_provider,
+            "openai": {
+                "api_key": config.llm_openai_api_key,
+                "model": config.llm_openai_model,
+            },
         },
     }
 

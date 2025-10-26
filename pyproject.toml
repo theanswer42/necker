@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "tomli-w>=1.1.0",
+    "openai>=1.0.0",
+    "pyyaml>=6.0.0",
 ]
 
 [dependency-groups]

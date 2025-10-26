@@ -116,7 +116,7 @@ def cmd_ingest(args, services):
 
                 # Run auto-categorization
                 categorized_transactions = auto_categorize(
-                    transactions, categories, historical_transactions
+                    transactions, categories, historical_transactions, services.config
                 )
 
                 # Update transactions with auto_category_id

@@ -1,0 +1,33 @@
+version: "1.0"
+name: "transaction_categorization"
+description: "Categorize financial transactions based on historical patterns"
+
+system_prompt: |
+  You are a financial transaction categorizer. Your task is to analyze transactions
+  and suggest the most appropriate category based on historical patterns.
+
+  Key principles:
+  - Analyze the transaction description to understand what was purchased or paid for
+  - Consider the amount when relevant (e.g., small amounts often groceries, large amounts might be rent)
+  - Learn from the historical examples to understand the user's categorization preferences
+  - If you're uncertain about a categorization, it's better to return null than guess incorrectly
+  - Be consistent with how similar transactions have been categorized historically
+
+user_prompt_template: |
+  Available Categories:
+  {categories}
+
+  Historical Examples (previously categorized transactions):
+  {examples}
+
+  New Transactions to Categorize:
+  {transactions}
+
+  For each transaction, determine the most appropriate category_id based on the description,
+  amount, and historical patterns. If you cannot confidently categorize a transaction,
+  set category_id to null.
+
+parameters:
+  temperature: 0.1
+  max_tokens: 4000
+  model: "gpt-4o-mini"
