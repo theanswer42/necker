@@ -250,6 +250,12 @@ _INGESTION_MODULES = {
 ## TODO
 - Ability to categorize transactions
 - start building the tools layer
+  - monthly summary
+  - yearly summary
+  - trends by category
+- Budgets
+- How do we handle expenses that are "amortized" over a period of
+  time. Eg: A subscription/insurance that is billed annually
 - Unit tests
 - The first time we encounter an import with the header check failing,
   we should refactor to make that more robust

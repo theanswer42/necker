@@ -15,18 +15,26 @@ This project uses `uv` as the Python package manager. The project requires Pytho
 uv sync
 ```
 
+### Running Commands
+
+**IMPORTANT**: ALL Python commands and tools must be run with `uv run` prefix. This includes:
+- Python scripts: `uv run python script.py` (NOT `python script.py`)
+- Python modules: `uv run python -m cli` (NOT `python -m cli`)
+- Development tools: `uv run ruff check` (NOT `ruff check`)
+- Any tool installed in the venv: `uv run <tool>` (NOT `<tool>`)
+
+This ensures commands use the correct virtual environment managed by `uv`.
+
 ### Running the Application
 ```bash
-python main.py
-# or
 uv run python main.py
 ```
 
 ### Development Tools
 ```bash
 # Code formatting and linting
-ruff check
-ruff format
+uv run ruff check
+uv run ruff format
 
 # Install development dependencies
 uv sync --group dev
