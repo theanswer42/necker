@@ -152,6 +152,39 @@ class TransactionService:
             # Return count of updated rows
             return conn.total_changes
 
+    def batch_update_categories(self, transactions: List[Transaction]) -> int:
+        """Update category_id for multiple transactions.
+
+        Args:
+            transactions: List of Transaction objects with category_id set.
+
+        Returns:
+            Number of transactions successfully updated.
+
+        Raises:
+            Exception: If batch update fails. All updates are rolled back on error.
+        """
+        if not transactions:
+            return 0
+
+        with self.db_manager.connect() as conn:
+            # Prepare update data (category_id, transaction_id)
+            data = [(t.category_id, t.id) for t in transactions]
+
+            # Execute batch update
+            conn.executemany(
+                """
+                UPDATE transactions
+                SET category_id = ?
+                WHERE id = ?
+                """,
+                data,
+            )
+            conn.commit()
+
+            # Return count of updated rows
+            return conn.total_changes
+
     def find_by_account(self, account_id: int) -> List[Transaction]:
         """Get all transactions for a specific account.
 

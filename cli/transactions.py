@@ -338,6 +338,120 @@ def cmd_export(args, services):
         sys.exit(1)
 
 
+def cmd_update_categories_from_csv(args, services):
+    """Update transaction categories from a CSV file.
+
+    Args:
+        args: Parsed command-line arguments
+        services: Services container with transactions, categories services
+    """
+    # Validate CSV file exists
+    csv_path = Path(args.input)
+    if not csv_path.exists():
+        logger.error(f"File not found: {args.input}")
+        sys.exit(1)
+
+    logger.info(f"Reading categories from: {csv_path}")
+
+    # Load all categories for name-to-id mapping
+    categories = services.categories.find_all()
+    category_name_to_id = {cat.name: cat.id for cat in categories}
+
+    # Read CSV file
+    try:
+        with open(csv_path, "r") as csvfile:
+            reader = csv.DictReader(csvfile)
+
+            # Validate headers
+            expected_headers = {
+                "id",
+                "transaction_date",
+                "post_date",
+                "description",
+                "account_name",
+                "bank_category",
+                "category_name",
+                "auto_category_name",
+                "amount",
+                "transaction_type",
+                "data_import_id",
+                "created_at",
+            }
+            if not expected_headers.issubset(set(reader.fieldnames or [])):
+                logger.error(
+                    f"CSV file is missing required headers. Expected: {expected_headers}"
+                )
+                sys.exit(1)
+
+            # Process each row
+            transactions_to_update = []
+            updated_count = 0
+            accepted_auto_count = 0
+            skipped_count = 0
+
+            for row in reader:
+                transaction_id = row["id"]
+                category_name = row["category_name"].strip()
+                auto_category_name = row["auto_category_name"].strip()
+
+                # Fetch transaction from database
+                transaction = services.transactions.find(transaction_id)
+                if not transaction:
+                    logger.warning(f"Transaction not found: {transaction_id}, skipping")
+                    skipped_count += 1
+                    continue
+
+                # Determine what to update
+                new_category_id = None
+
+                if category_name:
+                    # User provided a category - use it
+                    if category_name not in category_name_to_id:
+                        logger.warning(
+                            f"Category '{category_name}' not found for transaction {transaction_id[:8]}..., skipping"
+                        )
+                        skipped_count += 1
+                        continue
+                    new_category_id = category_name_to_id[category_name]
+
+                    # Only update if category has changed
+                    if transaction.category_id != new_category_id:
+                        transaction.category_id = new_category_id
+                        transactions_to_update.append(transaction)
+                        updated_count += 1
+                else:
+                    # No user category - accept auto category if available
+                    if auto_category_name and transaction.auto_category_id:
+                        # Only update if category_id is different from auto_category_id
+                        if transaction.category_id != transaction.auto_category_id:
+                            transaction.category_id = transaction.auto_category_id
+                            transactions_to_update.append(transaction)
+                            accepted_auto_count += 1
+
+        if not transactions_to_update:
+            logger.info("No category updates needed.")
+            return
+
+        logger.info(
+            f"\nUpdating categories for {len(transactions_to_update)} transaction(s)..."
+        )
+        logger.info(f"  Manual updates: {updated_count}")
+        logger.info(f"  Auto-category accepted: {accepted_auto_count}")
+        if skipped_count > 0:
+            logger.info(f"  Skipped: {skipped_count}")
+
+        # Batch update
+        updated = services.transactions.batch_update_categories(transactions_to_update)
+        logger.info(f"\n✓ Successfully updated {updated} transaction(s)")
+
+    except csv.Error as e:
+        logger.error(f"Error reading CSV file: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Error updating categories: {e}")
+        sys.exit(1)
+
+
 def setup_parser(subparsers):
     """Setup transactions subcommand parser.
 
@@ -441,3 +555,36 @@ Examples:
     )
 
     export_parser.set_defaults(func=cmd_export)
+
+    # transactions update-categories-from-csv
+    update_categories_parser = transactions_subparsers.add_parser(
+        "update-categories-from-csv",
+        help="Update transaction categories from a CSV file",
+        description="Update categories by reading from an exported CSV file",
+        epilog="""
+Examples:
+  # Export transactions, edit categories, then update
+  python -m cli transactions export --month 2025/10 --output transactions.csv
+  # ... edit transactions.csv to add categories ...
+  python -m cli transactions update-categories-from-csv --input transactions.csv
+
+Workflow:
+  1. Export transactions to CSV
+  2. Edit the category_name column in the CSV:
+     - Add a category name to manually categorize a transaction
+     - Leave empty to accept the auto_category_name
+  3. Run this command to apply the changes
+
+Logic:
+  - If category_name is filled → update category to that value
+  - If category_name is empty → update category to auto_category (if available)
+        """,
+    )
+
+    update_categories_parser.add_argument(
+        "--input",
+        required=True,
+        help="Path to the CSV file with updated categories",
+    )
+
+    update_categories_parser.set_defaults(func=cmd_update_categories_from_csv)
