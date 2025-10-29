@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import csv
 import gzip
 import shutil
 from pathlib import Path
@@ -199,6 +200,144 @@ def cmd_set_category(args, services):
         sys.exit(1)
 
 
+def cmd_export(args, services):
+    """Export transactions to CSV.
+
+    Args:
+        args: Parsed command-line arguments
+        services: Services container with transactions, accounts, categories services
+    """
+    # Validate that both --start-date and --end-date are provided together
+    if args.start_date and not args.end_date:
+        logger.error("--start-date requires --end-date to be specified")
+        sys.exit(1)
+    if args.end_date and not args.start_date:
+        logger.error("--end-date requires --start-date to be specified")
+        sys.exit(1)
+
+    # Determine date range based on --month or --start-date/--end-date
+    account_id = None
+
+    # Handle account filter if specified
+    if args.account:
+        account = services.accounts.find_by_name(args.account)
+        if not account:
+            logger.error(f"Account '{args.account}' not found.")
+            logger.info("Use 'python -m cli accounts list' to see available accounts.")
+            sys.exit(1)
+        account_id = account.id
+        logger.info(f"Filtering by account: {account.name}")
+
+    # Fetch transactions based on date parameters
+    try:
+        if args.month:
+            # Parse month in format YYYY/MM
+            year, month = args.month.split("/")
+            year = int(year)
+            month = int(month)
+
+            if month < 1 or month > 12:
+                logger.error("Month must be between 1 and 12")
+                sys.exit(1)
+
+            logger.info(f"Exporting transactions for {year}/{month:02d}")
+            transactions = services.transactions.get_transactions_by_month(
+                year, month, account_id
+            )
+        else:
+            # Parse start and end dates in format YYYY/MM/DD
+            start_year, start_month, start_day = args.start_date.split("/")
+            start_date = (
+                f"{int(start_year):04d}-{int(start_month):02d}-{int(start_day):02d}"
+            )
+
+            end_year, end_month, end_day = args.end_date.split("/")
+            end_date = f"{int(end_year):04d}-{int(end_month):02d}-{int(end_day):02d}"
+
+            logger.info(f"Exporting transactions from {start_date} to {end_date}")
+            transactions = services.transactions.get_transactions_by_date_range(
+                start_date, end_date, account_id
+            )
+
+    except (ValueError, IndexError) as e:
+        logger.error(f"Invalid date format: {e}")
+        logger.error(
+            "Use YYYY/MM format for --month or YYYY/MM/DD format for --start-date and --end-date"
+        )
+        sys.exit(1)
+
+    if not transactions:
+        logger.info("No transactions found for the specified criteria.")
+        sys.exit(0)
+
+    logger.info(f"Found {len(transactions)} transaction(s)")
+
+    # Get all accounts and categories for name lookups
+    accounts = services.accounts.find_all()
+    categories = services.categories.find_all()
+
+    # Build lookup dictionaries
+    account_map = {acc.id: acc.name for acc in accounts}
+    category_map = {cat.id: cat.name for cat in categories}
+
+    # Write to CSV
+    try:
+        output_path = Path(args.output)
+
+        # Create parent directory if it doesn't exist
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+
+            # Write header
+            writer.writerow(
+                [
+                    "id",
+                    "transaction_date",
+                    "post_date",
+                    "description",
+                    "account_name",
+                    "bank_category",
+                    "category_name",
+                    "auto_category_name",
+                    "amount",
+                    "transaction_type",
+                    "data_import_id",
+                    "created_at",
+                ]
+            )
+
+            # Write data rows
+            for t in transactions:
+                writer.writerow(
+                    [
+                        t.id,
+                        t.transaction_date.isoformat(),
+                        t.post_date.isoformat() if t.post_date else "",
+                        t.description,
+                        account_map.get(t.account_id, ""),
+                        t.bank_category or "",
+                        category_map.get(t.category_id, "") if t.category_id else "",
+                        (
+                            category_map.get(t.auto_category_id, "")
+                            if t.auto_category_id
+                            else ""
+                        ),
+                        float(t.amount),
+                        t.type,
+                        t.data_import_id,
+                        "",  # created_at - not available on Transaction model
+                    ]
+                )
+
+        logger.info(f"✓ Successfully exported transactions to: {output_path}")
+
+    except Exception as e:
+        logger.error(f"Error exporting transactions: {e}")
+        sys.exit(1)
+
+
 def setup_parser(subparsers):
     """Setup transactions subcommand parser.
 
@@ -255,3 +394,50 @@ Examples:
         help="Category name or ID",
     )
     set_category_parser.set_defaults(func=cmd_set_category)
+
+    # transactions export
+    export_parser = transactions_subparsers.add_parser(
+        "export",
+        help="Export transactions to CSV",
+        description="Export transactions to a CSV file with date filtering",
+        epilog="""
+Examples:
+  # Export transactions for October 2025
+  python -m cli transactions export --month 2025/10 --output transactions.csv
+
+  # Export transactions for a date range
+  python -m cli transactions export --start-date 2025/10/01 --end-date 2025/10/31 --output transactions.csv
+
+  # Export transactions for a specific account
+  python -m cli transactions export --month 2025/10 --account bofa_checking --output transactions.csv
+        """,
+    )
+
+    # Date range options (mutually exclusive)
+    date_group = export_parser.add_mutually_exclusive_group(required=True)
+    date_group.add_argument(
+        "--month",
+        help="Month to export in YYYY/MM format (e.g., 2025/10 for October 2025)",
+    )
+    date_group.add_argument(
+        "--start-date",
+        help="Start date in YYYY/MM/DD format (e.g., 2025/10/01). Must be used with --end-date",
+    )
+
+    export_parser.add_argument(
+        "--end-date",
+        help="End date in YYYY/MM/DD format (e.g., 2025/10/31). Must be used with --start-date",
+    )
+
+    export_parser.add_argument(
+        "--account",
+        help="Filter by account name (case-insensitive exact match)",
+    )
+
+    export_parser.add_argument(
+        "--output",
+        required=True,
+        help="Output CSV file path",
+    )
+
+    export_parser.set_defaults(func=cmd_export)

@@ -239,6 +239,65 @@ class TransactionService:
                 return self._row_to_transaction(row)
             return None
 
+    def get_transactions_by_date_range(
+        self, start_date: str, end_date: str, account_id: Optional[int] = None
+    ) -> List[Transaction]:
+        """Get transactions within a date range.
+
+        Args:
+            start_date: Start date in ISO format (YYYY-MM-DD).
+            end_date: End date in ISO format (YYYY-MM-DD).
+            account_id: Optional account ID to filter by.
+
+        Returns:
+            List of Transaction objects ordered by date (newest first).
+        """
+        query = """
+            SELECT id, account_id, data_import_id, transaction_date, post_date,
+                   description, bank_category, category_id, auto_category_id, amount, transaction_type,
+                   additional_metadata
+            FROM transactions
+            WHERE transaction_date >= ? AND transaction_date <= ?
+        """
+
+        params = [start_date, end_date]
+
+        if account_id is not None:
+            query += " AND account_id = ?"
+            params.append(account_id)
+
+        query += " ORDER BY transaction_date DESC, id"
+
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(query, params)
+            rows = cursor.fetchall()
+
+            return [self._row_to_transaction(row) for row in rows]
+
+    def get_transactions_by_month(
+        self, year: int, month: int, account_id: Optional[int] = None
+    ) -> List[Transaction]:
+        """Get transactions for a specific month.
+
+        Args:
+            year: Year (e.g., 2025).
+            month: Month (1-12).
+            account_id: Optional account ID to filter by.
+
+        Returns:
+            List of Transaction objects ordered by date (newest first).
+        """
+        import calendar
+
+        # Calculate start and end dates for the month
+        start_date = f"{year:04d}-{month:02d}-01"
+
+        # Get last day of month
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = f"{year:04d}-{month:02d}-{last_day:02d}"
+
+        return self.get_transactions_by_date_range(start_date, end_date, account_id)
+
     def _row_to_transaction(self, row: tuple) -> Transaction:
         """Convert a database row to a Transaction object."""
         return Transaction(
