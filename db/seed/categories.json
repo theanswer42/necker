@@ -1,94 +1,98 @@
 [
-  {
-    "name": "housing",
-    "description": "Housing and rent expenses",
-    "children": [
-      {
-        "name": "rent",
-        "description": "Monthly rent payments"
-      }
-    ]
-  },
-  {
-    "name": "utilities",
-    "description": "Utility bills and services"
-  },
-  {
-    "name": "food",
-    "description": "Food and dining expenses",
-    "children": [
-      {
-        "name": "groceries",
-        "description": "Grocery shopping"
-      },
-      {
-        "name": "eating out",
-        "description": "Restaurants and takeout"
-      },
-      {
-        "name": "alcohol",
-        "description": "Alcoholic beverages"
-      }
-    ]
-  },
-  {
-    "name": "transportation",
-    "description": "Transportation and commute expenses",
-    "children": [
-      {
-        "name": "gas",
-        "description": "Fuel for vehicles"
-      },
-      {
-        "name": "public transit",
-        "description": "Bus, train, subway fares"
-      },
-      {
-        "name": "rideshare",
-        "description": "Uber, Lyft, etc."
-      }
-    ]
-  },
-  {
-    "name": "insurance",
-    "description": "Insurance premiums and payments"
-  },
-  {
-    "name": "healthcare",
-    "description": "Medical expenses and health services"
-  },
-  {
-    "name": "subscriptions",
-    "description": "Recurring subscription services",
-    "children": [
-      {
-        "name": "streaming",
-        "description": "Netflix, Spotify, etc."
-      },
-      {
-        "name": "software",
-        "description": "Software subscriptions and licenses"
-      },
-      {
-        "name": "memberships",
-        "description": "Gym, clubs, and other memberships"
-      }
-    ]
-  },
-  {
-    "name": "shopping",
-    "description": "General shopping and retail purchases"
-  },
-  {
-    "name": "travel",
-    "description": "Travel and vacation expenses"
-  },
-  {
-    "name": "family support",
-    "description": "Financial support for family members"
-  },
-  {
-    "name": "other",
-    "description": "Miscellaneous expenses"
-  }
+    {
+        "name": "housing",
+        "description": "Housing and rent expenses",
+        "children": [
+            {
+                "name": "rent",
+                "description": "Monthly rent payments"
+            }
+        ]
+    },
+    {
+        "name": "utilities",
+        "description": "Utility bills and services"
+    },
+    {
+        "name": "food",
+        "description": "Food and dining expenses",
+        "children": [
+            {
+                "name": "groceries",
+                "description": "Grocery shopping"
+            },
+            {
+                "name": "eating out",
+                "description": "Restaurants and takeout"
+            },
+            {
+                "name": "alcohol",
+                "description": "Alcoholic beverages"
+            }
+        ]
+    },
+    {
+        "name": "transportation",
+        "description": "Transportation and commute expenses",
+        "children": [
+            {
+                "name": "gas",
+                "description": "Fuel for vehicles"
+            },
+            {
+                "name": "public transit",
+                "description": "Bus, train, subway fares"
+            },
+            {
+                "name": "rideshare",
+                "description": "Uber, Lyft, etc."
+            }
+        ]
+    },
+    {
+        "name": "insurance",
+        "description": "Insurance premiums and payments"
+    },
+    {
+        "name": "healthcare",
+        "description": "Medical expenses and health services"
+    },
+    {
+        "name": "subscriptions",
+        "description": "Recurring subscription services",
+        "children": [
+            {
+                "name": "streaming",
+                "description": "Netflix, Spotify, etc."
+            },
+            {
+                "name": "software",
+                "description": "Software subscriptions and licenses"
+            },
+            {
+                "name": "memberships",
+                "description": "Gym, clubs, and other memberships"
+            }
+        ]
+    },
+    {
+        "name": "shopping",
+        "description": "General shopping and retail purchases"
+    },
+    {
+        "name": "travel",
+        "description": "Travel and vacation expenses"
+    },
+    {
+        "name": "family support",
+        "description": "Financial support for family members"
+    },
+    {
+        "name": "charity",
+        "description": "Donation to Charity"
+    },
+    {
+        "name": "other",
+        "description": "Miscellaneous expenses"
+    }
 ]
