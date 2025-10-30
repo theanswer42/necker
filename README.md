@@ -1,5 +1,7 @@
 # Necker
 
+[![Tests](https://github.com/theanswer42/necker/actions/workflows/test.yml/badge.svg)](https://github.com/theanswer42/necker/actions)
+
 A Python-based personal finance tool for ingesting and managing
 transactions from multiple financial institutions. Named after Jacques
 Necker, the economist put in charge of fixing the French economy
@@ -247,16 +249,27 @@ _INGESTION_MODULES = {
 }
 ```
 
+## Testing
+
+This project includes comprehensive unit tests with 100% coverage of ingestion modules.
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run tests with coverage report
+uv run pytest --cov=ingestion --cov=services --cov=models --cov-report=term-missing
+
+# Run tests in watch mode (requires pytest-watch)
+uv run ptw
+```
+
 ## TODO
-- Ability to categorize transactions
 - start building the tools layer
   - monthly summary
   - yearly summary
   - trends by category
 - Budgets
-- How do we handle expenses that are "amortized" over a period of
-  time. Eg: A subscription/insurance that is billed annually
-- Unit tests
 - The first time we encounter an import with the header check failing,
   we should refactor to make that more robust
 
