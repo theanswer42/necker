@@ -22,6 +22,8 @@ class Transaction:
     )
     category_id: Optional[int] = None  # user-defined category
     auto_category_id: Optional[int] = None  # LLM-suggested category
+    amortize_months: Optional[int] = None  # number of months to amortize over
+    amortize_end_date: Optional[date] = None  # calculated end date for amortization
 
     @classmethod
     def create_with_checksum(

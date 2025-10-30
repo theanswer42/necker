@@ -179,17 +179,11 @@ def cmd_set_category(args, services):
 
     # Update transaction category_id
     try:
-        # We need to update the transaction in the database
-        with services.db_manager.connect() as conn:
-            cursor = conn.execute(
-                "UPDATE transactions SET category_id = ? WHERE id = ?",
-                (category.id, transaction_id),
-            )
-            conn.commit()
+        success = services.transactions.update_category(transaction_id, category.id)
 
-            if cursor.rowcount == 0:
-                logger.error("Failed to update transaction.")
-                sys.exit(1)
+        if not success:
+            logger.error("Failed to update transaction.")
+            sys.exit(1)
 
         logger.info("✓ Transaction categorized successfully")
         logger.info(f"  Transaction: {transaction.description[:50]}...")
@@ -305,6 +299,8 @@ def cmd_export(args, services):
                     "transaction_type",
                     "data_import_id",
                     "created_at",
+                    "amortize_months",
+                    "amortize_end_date",
                 ]
             )
 
@@ -328,6 +324,12 @@ def cmd_export(args, services):
                         t.type,
                         t.data_import_id,
                         "",  # created_at - not available on Transaction model
+                        t.amortize_months or "",
+                        (
+                            t.amortize_end_date.isoformat()
+                            if t.amortize_end_date
+                            else ""
+                        ),
                     ]
                 )
 
@@ -338,20 +340,22 @@ def cmd_export(args, services):
         sys.exit(1)
 
 
-def cmd_update_categories_from_csv(args, services):
-    """Update transaction categories from a CSV file.
+def cmd_update_from_csv(args, services):
+    """Update transactions from a CSV file.
 
     Args:
         args: Parsed command-line arguments
         services: Services container with transactions, categories services
     """
+    from dateutil.relativedelta import relativedelta
+
     # Validate CSV file exists
     csv_path = Path(args.input)
     if not csv_path.exists():
         logger.error(f"File not found: {args.input}")
         sys.exit(1)
 
-    logger.info(f"Reading categories from: {csv_path}")
+    logger.info(f"Reading updates from: {csv_path}")
 
     # Load all categories for name-to-id mapping
     categories = services.categories.find_all()
@@ -376,6 +380,8 @@ def cmd_update_categories_from_csv(args, services):
                 "transaction_type",
                 "data_import_id",
                 "created_at",
+                "amortize_months",
+                "amortize_end_date",
             }
             if not expected_headers.issubset(set(reader.fieldnames or [])):
                 logger.error(
@@ -384,15 +390,18 @@ def cmd_update_categories_from_csv(args, services):
                 sys.exit(1)
 
             # Process each row
-            transactions_to_update = []
-            updated_count = 0
+            category_updates = []
+            amortization_updates = []
+            category_updated_count = 0
             accepted_auto_count = 0
+            amortization_updated_count = 0
             skipped_count = 0
 
             for row in reader:
                 transaction_id = row["id"]
                 category_name = row["category_name"].strip()
                 auto_category_name = row["auto_category_name"].strip()
+                amortize_months_str = row["amortize_months"].strip()
 
                 # Fetch transaction from database
                 transaction = services.transactions.find(transaction_id)
@@ -401,8 +410,9 @@ def cmd_update_categories_from_csv(args, services):
                     skipped_count += 1
                     continue
 
-                # Determine what to update
+                # Process category updates
                 new_category_id = None
+                category_changed = False
 
                 if category_name:
                     # User provided a category - use it
@@ -417,38 +427,135 @@ def cmd_update_categories_from_csv(args, services):
                     # Only update if category has changed
                     if transaction.category_id != new_category_id:
                         transaction.category_id = new_category_id
-                        transactions_to_update.append(transaction)
-                        updated_count += 1
+                        category_updates.append(transaction)
+                        category_updated_count += 1
+                        category_changed = True
                 else:
                     # No user category - accept auto category if available
                     if auto_category_name and transaction.auto_category_id:
                         # Only update if category_id is different from auto_category_id
                         if transaction.category_id != transaction.auto_category_id:
                             transaction.category_id = transaction.auto_category_id
-                            transactions_to_update.append(transaction)
+                            category_updates.append(transaction)
                             accepted_auto_count += 1
+                            category_changed = True
 
-        if not transactions_to_update:
-            logger.info("No category updates needed.")
+                # Process amortization updates
+                if amortize_months_str:
+                    try:
+                        amortize_months = int(amortize_months_str)
+                        if amortize_months < 1:
+                            logger.warning(
+                                f"Invalid amortize_months {amortize_months} for transaction {transaction_id[:8]}..., skipping"
+                            )
+                            continue
+
+                        # Check if amortization has changed
+                        if transaction.amortize_months != amortize_months:
+                            # Calculate new amortize_end_date
+                            amortize_end_date = (
+                                transaction.transaction_date
+                                + relativedelta(months=amortize_months)
+                            )
+
+                            # Update fields
+                            transaction.amortize_months = amortize_months
+                            transaction.amortize_end_date = amortize_end_date
+
+                            # Only add if not already in category_updates
+                            if not category_changed:
+                                amortization_updates.append(transaction)
+                            amortization_updated_count += 1
+                    except ValueError:
+                        logger.warning(
+                            f"Invalid amortize_months value '{amortize_months_str}' for transaction {transaction_id[:8]}..., skipping"
+                        )
+
+        # Combine updates
+        all_updates = category_updates + amortization_updates
+
+        if not all_updates:
+            logger.info("No updates needed.")
             return
 
-        logger.info(
-            f"\nUpdating categories for {len(transactions_to_update)} transaction(s)..."
-        )
-        logger.info(f"  Manual updates: {updated_count}")
-        logger.info(f"  Auto-category accepted: {accepted_auto_count}")
+        logger.info(f"\nUpdating {len(all_updates)} transaction(s)...")
+        logger.info(f"  Category manual updates: {category_updated_count}")
+        logger.info(f"  Category auto-accepted: {accepted_auto_count}")
+        logger.info(f"  Amortization updates: {amortization_updated_count}")
         if skipped_count > 0:
             logger.info(f"  Skipped: {skipped_count}")
 
-        # Batch update
-        updated = services.transactions.batch_update_categories(transactions_to_update)
-        logger.info(f"\n✓ Successfully updated {updated} transaction(s)")
+        # Batch update categories
+        if category_updates:
+            updated = services.transactions.batch_update_categories(category_updates)
+            logger.info(
+                f"\n✓ Successfully updated categories for {updated} transaction(s)"
+            )
+
+        # Update amortization
+        if amortization_updates:
+            updated = services.transactions.batch_update_amortization(
+                amortization_updates
+            )
+            logger.info(
+                f"✓ Successfully updated amortization for {updated} transaction(s)"
+            )
 
     except csv.Error as e:
         logger.error(f"Error reading CSV file: {e}")
         sys.exit(1)
     except Exception as e:
-        logger.error(f"Error updating categories: {e}")
+        logger.error(f"Error updating transactions: {e}")
+        sys.exit(1)
+
+
+def cmd_set_amortization(args, services):
+    """Set amortization for a transaction.
+
+    Args:
+        args: Parsed command-line arguments with transaction_id and months
+        services: Services container with transactions service
+    """
+    from dateutil.relativedelta import relativedelta
+
+    transaction_id = args.transaction_id
+    months = args.months
+
+    # Validate months
+    if months < 1:
+        logger.error("Months must be a positive integer")
+        sys.exit(1)
+
+    # Look up transaction
+    transaction = services.transactions.find(transaction_id)
+    if not transaction:
+        logger.error(f"Transaction with ID '{transaction_id}' not found.")
+        sys.exit(1)
+
+    # Calculate amortize_end_date
+    amortize_end_date = transaction.transaction_date + relativedelta(months=months)
+
+    # Update transaction
+    try:
+        success = services.transactions.update_amortization(
+            transaction_id, months, amortize_end_date
+        )
+
+        if not success:
+            logger.error("Failed to update transaction.")
+            sys.exit(1)
+
+        logger.info("✓ Transaction amortization set successfully")
+        logger.info(f"  Transaction: {transaction.description[:50]}...")
+        logger.info(f"  Amount: ${transaction.amount}")
+        logger.info(f"  Amortize months: {months}")
+        logger.info(
+            f"  Amortization period: {transaction.transaction_date.isoformat()} to {amortize_end_date.isoformat()}"
+        )
+        logger.info(f"  Monthly amount: ${float(transaction.amount) / months:.2f}")
+
+    except Exception as e:
+        logger.error(f"Error updating transaction: {e}")
         sys.exit(1)
 
 
@@ -556,35 +663,63 @@ Examples:
 
     export_parser.set_defaults(func=cmd_export)
 
-    # transactions update-categories-from-csv
-    update_categories_parser = transactions_subparsers.add_parser(
-        "update-categories-from-csv",
-        help="Update transaction categories from a CSV file",
-        description="Update categories by reading from an exported CSV file",
+    # transactions update-from-csv
+    update_from_csv_parser = transactions_subparsers.add_parser(
+        "update-from-csv",
+        help="Update transactions from a CSV file",
+        description="Update categories and amortization by reading from an exported CSV file",
         epilog="""
 Examples:
-  # Export transactions, edit categories, then update
+  # Export transactions, edit, then update
   python -m cli transactions export --month 2025/10 --output transactions.csv
-  # ... edit transactions.csv to add categories ...
-  python -m cli transactions update-categories-from-csv --input transactions.csv
+  # ... edit transactions.csv to add categories and amortization ...
+  python -m cli transactions update-from-csv --input transactions.csv
 
 Workflow:
   1. Export transactions to CSV
-  2. Edit the category_name column in the CSV:
-     - Add a category name to manually categorize a transaction
-     - Leave empty to accept the auto_category_name
+  2. Edit the CSV:
+     - category_name: Add a category name to manually categorize
+     - category_name: Leave empty to accept auto_category_name
+     - amortize_months: Set to number of months to amortize over
   3. Run this command to apply the changes
 
 Logic:
   - If category_name is filled → update category to that value
   - If category_name is empty → update category to auto_category (if available)
+  - If amortize_months is set → calculate and update amortize_end_date
         """,
     )
 
-    update_categories_parser.add_argument(
+    update_from_csv_parser.add_argument(
         "--input",
         required=True,
-        help="Path to the CSV file with updated categories",
+        help="Path to the CSV file with updates",
     )
 
-    update_categories_parser.set_defaults(func=cmd_update_categories_from_csv)
+    update_from_csv_parser.set_defaults(func=cmd_update_from_csv)
+
+    # transactions set-amortization
+    set_amortization_parser = transactions_subparsers.add_parser(
+        "set-amortization",
+        help="Set amortization for a transaction",
+        description="Set the number of months to amortize a transaction over",
+        epilog="""
+Examples:
+  # Amortize a $120 annual subscription over 12 months
+  python -m cli transactions set-amortization <transaction_id> --months 12
+
+  # This will calculate the end date and set amortize_months
+  # Monthly amount = $120 / 12 = $10
+        """,
+    )
+    set_amortization_parser.add_argument(
+        "transaction_id",
+        help="Transaction ID (SHA256 hash)",
+    )
+    set_amortization_parser.add_argument(
+        "--months",
+        type=int,
+        required=True,
+        help="Number of months to amortize over (must be positive)",
+    )
+    set_amortization_parser.set_defaults(func=cmd_set_amortization)

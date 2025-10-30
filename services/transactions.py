@@ -36,8 +36,8 @@ class TransactionService:
                 INSERT INTO transactions (
                     id, account_id, data_import_id, transaction_date, post_date,
                     description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                    additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    additional_metadata, amortize_months, amortize_end_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     transaction.id,
@@ -58,6 +58,12 @@ class TransactionService:
                     (
                         json.dumps(transaction.additional_metadata)
                         if transaction.additional_metadata
+                        else None
+                    ),
+                    transaction.amortize_months,
+                    (
+                        transaction.amortize_end_date.isoformat()
+                        if transaction.amortize_end_date
                         else None
                     ),
                 ),
@@ -99,6 +105,8 @@ class TransactionService:
                     json.dumps(t.additional_metadata)
                     if t.additional_metadata
                     else None,
+                    t.amortize_months,
+                    t.amortize_end_date.isoformat() if t.amortize_end_date else None,
                 )
                 for t in transactions
             ]
@@ -109,8 +117,8 @@ class TransactionService:
                 INSERT OR IGNORE INTO transactions (
                     id, account_id, data_import_id, transaction_date, post_date,
                     description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                    additional_metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    additional_metadata, amortize_months, amortize_end_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 data,
             )
@@ -152,6 +160,33 @@ class TransactionService:
             # Return count of updated rows
             return conn.total_changes
 
+    def update_category(self, transaction_id: str, category_id: int) -> bool:
+        """Update category_id for a single transaction.
+
+        Args:
+            transaction_id: The transaction checksum ID.
+            category_id: The category ID to set.
+
+        Returns:
+            True if update was successful, False otherwise.
+
+        Raises:
+            Exception: If update fails.
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE transactions
+                SET category_id = ?
+                WHERE id = ?
+                """,
+                (category_id, transaction_id),
+            )
+            conn.commit()
+
+            # Return True if at least one row was updated
+            return cursor.rowcount > 0
+
     def batch_update_categories(self, transactions: List[Transaction]) -> int:
         """Update category_id for multiple transactions.
 
@@ -185,6 +220,76 @@ class TransactionService:
             # Return count of updated rows
             return conn.total_changes
 
+    def update_amortization(
+        self, transaction_id: str, amortize_months: int, amortize_end_date: date
+    ) -> bool:
+        """Update amortization fields for a single transaction.
+
+        Args:
+            transaction_id: The transaction checksum ID.
+            amortize_months: Number of months to amortize over.
+            amortize_end_date: End date of amortization period.
+
+        Returns:
+            True if update was successful, False otherwise.
+
+        Raises:
+            Exception: If update fails.
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE transactions
+                SET amortize_months = ?, amortize_end_date = ?
+                WHERE id = ?
+                """,
+                (amortize_months, amortize_end_date.isoformat(), transaction_id),
+            )
+            conn.commit()
+
+            # Return True if at least one row was updated
+            return cursor.rowcount > 0
+
+    def batch_update_amortization(self, transactions: List[Transaction]) -> int:
+        """Update amortization fields for multiple transactions.
+
+        Args:
+            transactions: List of Transaction objects with amortize_months and amortize_end_date set.
+
+        Returns:
+            Number of transactions successfully updated.
+
+        Raises:
+            Exception: If batch update fails. All updates are rolled back on error.
+        """
+        if not transactions:
+            return 0
+
+        with self.db_manager.connect() as conn:
+            # Prepare update data (amortize_months, amortize_end_date, transaction_id)
+            data = [
+                (
+                    t.amortize_months,
+                    t.amortize_end_date.isoformat() if t.amortize_end_date else None,
+                    t.id,
+                )
+                for t in transactions
+            ]
+
+            # Execute batch update
+            conn.executemany(
+                """
+                UPDATE transactions
+                SET amortize_months = ?, amortize_end_date = ?
+                WHERE id = ?
+                """,
+                data,
+            )
+            conn.commit()
+
+            # Return count of updated rows
+            return conn.total_changes
+
     def find_by_account(self, account_id: int) -> List[Transaction]:
         """Get all transactions for a specific account.
 
@@ -199,7 +304,7 @@ class TransactionService:
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
                        description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                       additional_metadata
+                       additional_metadata, amortize_months, amortize_end_date
                 FROM transactions
                 WHERE account_id = ?
                 ORDER BY transaction_date DESC, id
@@ -233,7 +338,7 @@ class TransactionService:
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
                        description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                       additional_metadata
+                       additional_metadata, amortize_months, amortize_end_date
                 FROM transactions
                 WHERE account_id = ?
                   AND category_id IS NOT NULL
@@ -260,7 +365,7 @@ class TransactionService:
                 """
                 SELECT id, account_id, data_import_id, transaction_date, post_date,
                        description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                       additional_metadata
+                       additional_metadata, amortize_months, amortize_end_date
                 FROM transactions
                 WHERE id = ?
                 """,
@@ -288,7 +393,7 @@ class TransactionService:
         query = """
             SELECT id, account_id, data_import_id, transaction_date, post_date,
                    description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                   additional_metadata
+                   additional_metadata, amortize_months, amortize_end_date
             FROM transactions
             WHERE transaction_date >= ? AND transaction_date <= ?
         """
@@ -346,4 +451,6 @@ class TransactionService:
             data_import_id=row[2],
             category_id=row[7],
             auto_category_id=row[8],
+            amortize_months=row[12],
+            amortize_end_date=date.fromisoformat(row[13]) if row[13] else None,
         )
