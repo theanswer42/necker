@@ -30,11 +30,4 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        uv run pytest tests/ --cov=ingestion --cov=services --cov=models --cov-report=term-missing --cov-report=html
-
-    - name: Upload coverage HTML report as artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: htmlcov/
+        uv run pytest tests/ --cov=ingestion --cov=services --cov=models --cov-report=term-missing
