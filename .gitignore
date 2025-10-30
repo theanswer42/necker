@@ -17,3 +17,10 @@ samples/
 
 # Directory for the local db
 db/data/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
