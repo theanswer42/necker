@@ -22,6 +22,12 @@ def reset():
     # Load configuration
     config = load_config()
 
+    # Check if reset is enabled
+    if not config.enable_reset:
+        print("\nReset is disabled in configuration (enable_reset=false).")
+        print("To enable reset, set enable_reset=true in ~/.config/necker.toml")
+        sys.exit(1)
+
     # Show what will be deleted
     print(f"\nData directory: {config.base_dir}")
     print(f"Database: {config.db_path}")
