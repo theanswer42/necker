@@ -20,6 +20,7 @@ class Config:
     log_dir: Path
     archive_enabled: bool
     archive_dir: Path
+    enable_reset: bool
     # LLM settings
     llm_enabled: bool
     llm_provider: str  # "openai", "ollama", etc.
@@ -44,6 +45,7 @@ class Config:
             log_dir=base_dir / "logs",
             archive_enabled=True,
             archive_dir=base_dir / "archives",
+            enable_reset=False,
             llm_enabled=False,
             llm_provider="openai",
             llm_openai_api_key="",
@@ -97,6 +99,8 @@ def load_config() -> Config:
     archive_enabled = archive_config.get("enabled", True)
     archive_dir = Path(archive_config.get("archive_dir", base_dir / "archives"))
 
+    enable_reset = data.get("enable_reset", False)
+
     llm_config = data.get("llm", {})
     llm_enabled = llm_config.get("enabled", False)
     llm_provider = llm_config.get("provider", "openai")
@@ -113,6 +117,7 @@ def load_config() -> Config:
         log_dir=log_dir,
         archive_enabled=archive_enabled,
         archive_dir=archive_dir,
+        enable_reset=enable_reset,
         llm_enabled=llm_enabled,
         llm_provider=llm_provider,
         llm_openai_api_key=llm_openai_api_key,
@@ -146,6 +151,7 @@ def _write_config(config: Config) -> None:
             "enabled": config.archive_enabled,
             "archive_dir": str(config.archive_dir),
         },
+        "enable_reset": config.enable_reset,
         "llm": {
             "enabled": config.llm_enabled,
             "provider": config.llm_provider,
