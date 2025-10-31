@@ -39,6 +39,7 @@ def test_config(tmp_path):
         log_dir=tmp_path / "necker" / "logs",
         archive_enabled=False,
         archive_dir=tmp_path / "necker" / "archives",
+        enable_reset=False,
         llm_enabled=False,
         llm_provider="openai",
         llm_openai_api_key="",
