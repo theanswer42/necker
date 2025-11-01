@@ -301,7 +301,13 @@ class TransactionService:
             return None
 
     def get_transactions_by_date_range(
-        self, start_date: str, end_date: str, account_id: Optional[int] = None
+        self,
+        start_date: str,
+        end_date: str,
+        *,
+        account_id: Optional[int] = None,
+        exclude_amortized: bool = False,
+        category_ids: Optional[List[int]] = None,
     ) -> List[Transaction]:
         """Get transactions within a date range.
 
@@ -309,6 +315,8 @@ class TransactionService:
             start_date: Start date in ISO format (YYYY-MM-DD).
             end_date: End date in ISO format (YYYY-MM-DD).
             account_id: Optional account ID to filter by.
+            exclude_amortized: If True, exclude transactions with amortize_months set.
+            category_ids: Optional list of category IDs to filter by.
 
         Returns:
             List of Transaction objects ordered by date (newest first).
@@ -325,6 +333,14 @@ class TransactionService:
             query += " AND account_id = ?"
             params.append(account_id)
 
+        if exclude_amortized:
+            query += " AND amortize_months IS NULL"
+
+        if category_ids is not None and len(category_ids) > 0:
+            placeholders = ", ".join(["?"] * len(category_ids))
+            query += f" AND category_id IN ({placeholders})"
+            params.extend(category_ids)
+
         query += " ORDER BY transaction_date DESC, id"
 
         with self.db_manager.connect() as conn:
@@ -334,7 +350,13 @@ class TransactionService:
             return [self._row_to_transaction(row) for row in rows]
 
     def get_transactions_by_month(
-        self, year: int, month: int, account_id: Optional[int] = None
+        self,
+        year: int,
+        month: int,
+        *,
+        account_id: Optional[int] = None,
+        exclude_amortized: bool = False,
+        category_ids: Optional[List[int]] = None,
     ) -> List[Transaction]:
         """Get transactions for a specific month.
 
@@ -342,6 +364,8 @@ class TransactionService:
             year: Year (e.g., 2025).
             month: Month (1-12).
             account_id: Optional account ID to filter by.
+            exclude_amortized: If True, exclude transactions with amortize_months set.
+            category_ids: Optional list of category IDs to filter by.
 
         Returns:
             List of Transaction objects ordered by date (newest first).
@@ -355,7 +379,104 @@ class TransactionService:
         last_day = calendar.monthrange(year, month)[1]
         end_date = f"{year:04d}-{month:02d}-{last_day:02d}"
 
-        return self.get_transactions_by_date_range(start_date, end_date, account_id)
+        return self.get_transactions_by_date_range(
+            start_date,
+            end_date,
+            account_id=account_id,
+            exclude_amortized=exclude_amortized,
+            category_ids=category_ids,
+        )
+
+    def get_accrued_transactions_by_month(
+        self,
+        year: int,
+        month: int,
+        *,
+        account_id: Optional[int] = None,
+        category_ids: Optional[List[int]] = None,
+    ) -> List[Transaction]:
+        """Get accrued transactions for a specific month.
+
+        Returns virtual Transaction objects representing the monthly accrual
+        for transactions that have amortization set. These are not stored in
+        the database and have the 'accrued' flag set to True.
+
+        Args:
+            year: Year (e.g., 2025).
+            month: Month (1-12).
+            account_id: Optional account ID to filter by.
+            category_ids: Optional list of category IDs to filter by.
+
+        Returns:
+            List of virtual Transaction objects with accrued amounts and dates.
+            Each transaction has:
+            - transaction_date set to start of the target month
+            - amount set to original_amount / amortize_months (rounded to 2 decimals)
+            - accrued flag set to True
+        """
+        import calendar
+
+        # Calculate start and end dates for the month
+        start_date = date(year, month, 1)
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = date(year, month, last_day)
+
+        # Build query to find transactions that accrue in this month
+        query = f"""
+            SELECT {_TRANSACTION_SELECT_FIELDS}
+            FROM transactions
+            WHERE transaction_date <= ?
+              AND amortize_end_date >= ?
+              AND amortize_months IS NOT NULL
+        """
+
+        params = [end_date.isoformat(), start_date.isoformat()]
+
+        if account_id is not None:
+            query += " AND account_id = ?"
+            params.append(account_id)
+
+        if category_ids is not None and len(category_ids) > 0:
+            placeholders = ", ".join(["?"] * len(category_ids))
+            query += f" AND category_id IN ({placeholders})"
+            params.extend(category_ids)
+
+        query += " ORDER BY transaction_date DESC, id"
+
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(query, params)
+            rows = cursor.fetchall()
+
+            # Convert rows to Transaction objects and transform to accrued versions
+            accrued_transactions = []
+            for row in rows:
+                original = self._row_to_transaction(row)
+
+                # Calculate accrued amount (rounded to 2 decimals)
+                accrued_amount = round(original.amount / original.amortize_months, 2)
+
+                # Create new Transaction with accrued values
+                accrued_txn = Transaction(
+                    id=original.id,
+                    account_id=original.account_id,
+                    transaction_date=start_date,  # Set to start of target month
+                    post_date=original.post_date,
+                    description=original.description,
+                    bank_category=original.bank_category,
+                    amount=accrued_amount,
+                    type=original.type,
+                    additional_metadata=original.additional_metadata,
+                    data_import_id=original.data_import_id,
+                    category_id=original.category_id,
+                    auto_category_id=original.auto_category_id,
+                    amortize_months=original.amortize_months,
+                    amortize_end_date=original.amortize_end_date,
+                    accrued=True,  # Mark as accrued transaction
+                )
+
+                accrued_transactions.append(accrued_txn)
+
+            return accrued_transactions
 
     def _row_to_transaction(self, row: tuple) -> Transaction:
         """Convert a database row to a Transaction object."""
