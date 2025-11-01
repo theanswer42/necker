@@ -453,10 +453,11 @@ def cmd_update_from_csv(args, services):
 
                         # Check if amortization has changed
                         if transaction.amortize_months != amortize_months:
-                            # Calculate new amortize_end_date
+                            # Calculate new amortize_end_date using month-boundary convention
+                            # End on last day of month before the actual anniversary date
                             amortize_end_date = (
                                 transaction.transaction_date
-                                + relativedelta(months=amortize_months)
+                                + relativedelta(months=amortize_months - 1, day=31)
                             )
 
                             # Update fields
@@ -535,8 +536,13 @@ def cmd_set_amortization(args, services):
         logger.error(f"Transaction with ID '{transaction_id}' not found.")
         sys.exit(1)
 
-    # Calculate amortize_end_date
-    amortize_end_date = transaction.transaction_date + relativedelta(months=months)
+    # Calculate amortize_end_date using month-boundary convention:
+    # - Give full month accrual to any month the transaction touches
+    # - End on last day of month before the actual anniversary date
+    # Example: Jan 15, 2024 + 12 months → Dec 31, 2024 (not Jan 15, 2025)
+    amortize_end_date = transaction.transaction_date + relativedelta(
+        months=months - 1, day=31
+    )
 
     # Update transaction
     try:
