@@ -6,6 +6,20 @@ from datetime import date, timedelta
 from decimal import Decimal
 from models.transaction import Transaction
 
+# SQL Query Constants
+_TRANSACTION_SELECT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
+       description, bank_category, category_id, auto_category_id, amount, transaction_type,
+       additional_metadata, amortize_months, amortize_end_date"""
+
+_TRANSACTION_INSERT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
+    description, bank_category, category_id, auto_category_id, amount, transaction_type,
+    additional_metadata, amortize_months, amortize_end_date"""
+
+# Automatically generate placeholders from field count
+_TRANSACTION_INSERT_PLACEHOLDERS = (
+    f"({', '.join(['?'] * len(_TRANSACTION_INSERT_FIELDS.split(',')))})"
+)
+
 
 class TransactionService:
     """Service for managing transactions."""
@@ -32,12 +46,9 @@ class TransactionService:
         """
         with self.db_manager.connect() as conn:
             conn.execute(
-                """
-                INSERT INTO transactions (
-                    id, account_id, data_import_id, transaction_date, post_date,
-                    description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                    additional_metadata, amortize_months, amortize_end_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                f"""
+                INSERT INTO transactions ({_TRANSACTION_INSERT_FIELDS})
+                VALUES {_TRANSACTION_INSERT_PLACEHOLDERS}
                 """,
                 (
                     transaction.id,
@@ -113,12 +124,9 @@ class TransactionService:
 
             # Execute bulk insert
             conn.executemany(
-                """
-                INSERT OR IGNORE INTO transactions (
-                    id, account_id, data_import_id, transaction_date, post_date,
-                    description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                    additional_metadata, amortize_months, amortize_end_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                f"""
+                INSERT OR IGNORE INTO transactions ({_TRANSACTION_INSERT_FIELDS})
+                VALUES {_TRANSACTION_INSERT_PLACEHOLDERS}
                 """,
                 data,
             )
@@ -222,10 +230,8 @@ class TransactionService:
         """
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
-                """
-                SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                       additional_metadata, amortize_months, amortize_end_date
+                f"""
+                SELECT {_TRANSACTION_SELECT_FIELDS}
                 FROM transactions
                 WHERE account_id = ?
                 ORDER BY transaction_date DESC, id
@@ -256,10 +262,8 @@ class TransactionService:
 
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
-                """
-                SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                       additional_metadata, amortize_months, amortize_end_date
+                f"""
+                SELECT {_TRANSACTION_SELECT_FIELDS}
                 FROM transactions
                 WHERE account_id = ?
                   AND category_id IS NOT NULL
@@ -283,10 +287,8 @@ class TransactionService:
         """
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
-                """
-                SELECT id, account_id, data_import_id, transaction_date, post_date,
-                       description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                       additional_metadata, amortize_months, amortize_end_date
+                f"""
+                SELECT {_TRANSACTION_SELECT_FIELDS}
                 FROM transactions
                 WHERE id = ?
                 """,
@@ -311,10 +313,8 @@ class TransactionService:
         Returns:
             List of Transaction objects ordered by date (newest first).
         """
-        query = """
-            SELECT id, account_id, data_import_id, transaction_date, post_date,
-                   description, bank_category, category_id, auto_category_id, amount, transaction_type,
-                   additional_metadata, amortize_months, amortize_end_date
+        query = f"""
+            SELECT {_TRANSACTION_SELECT_FIELDS}
             FROM transactions
             WHERE transaction_date >= ? AND transaction_date <= ?
         """
