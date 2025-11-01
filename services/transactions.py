@@ -127,30 +127,63 @@ class TransactionService:
             # Return count of inserted rows
             return conn.total_changes
 
-    def batch_update_auto_categories(self, transactions: List[Transaction]) -> int:
-        """Update auto_category_id for multiple transactions.
+    def batch_update(
+        self, transactions: List[Transaction], field_names: List[str]
+    ) -> int:
+        """Update specified fields for multiple transactions.
 
         Args:
-            transactions: List of Transaction objects with auto_category_id set.
+            transactions: List of Transaction objects to update.
+            field_names: List of field names to update. Supported fields:
+                        'category_id', 'auto_category_id', 'amortize_months', 'amortize_end_date'
 
         Returns:
             Number of transactions successfully updated.
 
         Raises:
+            ValueError: If unsupported field names are provided.
             Exception: If batch update fails. All updates are rolled back on error.
         """
         if not transactions:
             return 0
 
+        if not field_names:
+            raise ValueError("field_names cannot be empty")
+
+        # Validate field names
+        supported_fields = {
+            "category_id",
+            "auto_category_id",
+            "amortize_months",
+            "amortize_end_date",
+        }
+        invalid_fields = set(field_names) - supported_fields
+        if invalid_fields:
+            raise ValueError(f"Unsupported field names: {invalid_fields}")
+
+        # Build SET clause dynamically
+        set_clause = ", ".join([f"{field} = ?" for field in field_names])
+
         with self.db_manager.connect() as conn:
-            # Prepare update data (auto_category_id, transaction_id)
-            data = [(t.auto_category_id, t.id) for t in transactions]
+            # Prepare update data - field values followed by transaction ID
+            data = []
+            for t in transactions:
+                row_data = []
+                for field in field_names:
+                    value = getattr(t, field)
+                    # Handle date serialization
+                    if field == "amortize_end_date" and value is not None:
+                        value = value.isoformat()
+                    row_data.append(value)
+                # Add transaction ID at the end for WHERE clause
+                row_data.append(t.id)
+                data.append(tuple(row_data))
 
             # Execute batch update
-            conn.executemany(
-                """
+            cursor = conn.executemany(
+                f"""
                 UPDATE transactions
-                SET auto_category_id = ?
+                SET {set_clause}
                 WHERE id = ?
                 """,
                 data,
@@ -158,137 +191,25 @@ class TransactionService:
             conn.commit()
 
             # Return count of updated rows
-            return conn.total_changes
+            return cursor.rowcount
 
-    def update_category(self, transaction_id: str, category_id: int) -> bool:
-        """Update category_id for a single transaction.
+    def update(self, transaction: Transaction, field_names: List[str]) -> bool:
+        """Update specified fields for a single transaction.
 
         Args:
-            transaction_id: The transaction checksum ID.
-            category_id: The category ID to set.
+            transaction: Transaction object to update.
+            field_names: List of field names to update. Supported fields:
+                        'category_id', 'auto_category_id', 'amortize_months', 'amortize_end_date'
 
         Returns:
             True if update was successful, False otherwise.
 
         Raises:
+            ValueError: If unsupported field names are provided.
             Exception: If update fails.
         """
-        with self.db_manager.connect() as conn:
-            cursor = conn.execute(
-                """
-                UPDATE transactions
-                SET category_id = ?
-                WHERE id = ?
-                """,
-                (category_id, transaction_id),
-            )
-            conn.commit()
-
-            # Return True if at least one row was updated
-            return cursor.rowcount > 0
-
-    def batch_update_categories(self, transactions: List[Transaction]) -> int:
-        """Update category_id for multiple transactions.
-
-        Args:
-            transactions: List of Transaction objects with category_id set.
-
-        Returns:
-            Number of transactions successfully updated.
-
-        Raises:
-            Exception: If batch update fails. All updates are rolled back on error.
-        """
-        if not transactions:
-            return 0
-
-        with self.db_manager.connect() as conn:
-            # Prepare update data (category_id, transaction_id)
-            data = [(t.category_id, t.id) for t in transactions]
-
-            # Execute batch update
-            conn.executemany(
-                """
-                UPDATE transactions
-                SET category_id = ?
-                WHERE id = ?
-                """,
-                data,
-            )
-            conn.commit()
-
-            # Return count of updated rows
-            return conn.total_changes
-
-    def update_amortization(
-        self, transaction_id: str, amortize_months: int, amortize_end_date: date
-    ) -> bool:
-        """Update amortization fields for a single transaction.
-
-        Args:
-            transaction_id: The transaction checksum ID.
-            amortize_months: Number of months to amortize over.
-            amortize_end_date: End date of amortization period.
-
-        Returns:
-            True if update was successful, False otherwise.
-
-        Raises:
-            Exception: If update fails.
-        """
-        with self.db_manager.connect() as conn:
-            cursor = conn.execute(
-                """
-                UPDATE transactions
-                SET amortize_months = ?, amortize_end_date = ?
-                WHERE id = ?
-                """,
-                (amortize_months, amortize_end_date.isoformat(), transaction_id),
-            )
-            conn.commit()
-
-            # Return True if at least one row was updated
-            return cursor.rowcount > 0
-
-    def batch_update_amortization(self, transactions: List[Transaction]) -> int:
-        """Update amortization fields for multiple transactions.
-
-        Args:
-            transactions: List of Transaction objects with amortize_months and amortize_end_date set.
-
-        Returns:
-            Number of transactions successfully updated.
-
-        Raises:
-            Exception: If batch update fails. All updates are rolled back on error.
-        """
-        if not transactions:
-            return 0
-
-        with self.db_manager.connect() as conn:
-            # Prepare update data (amortize_months, amortize_end_date, transaction_id)
-            data = [
-                (
-                    t.amortize_months,
-                    t.amortize_end_date.isoformat() if t.amortize_end_date else None,
-                    t.id,
-                )
-                for t in transactions
-            ]
-
-            # Execute batch update
-            conn.executemany(
-                """
-                UPDATE transactions
-                SET amortize_months = ?, amortize_end_date = ?
-                WHERE id = ?
-                """,
-                data,
-            )
-            conn.commit()
-
-            # Return count of updated rows
-            return conn.total_changes
+        count = self.batch_update([transaction], field_names)
+        return count > 0
 
     def find_by_account(self, account_id: int) -> List[Transaction]:
         """Get all transactions for a specific account.

@@ -185,7 +185,8 @@ class TestTransactionService:
         transaction.data_import_id = data_import.id
         services.transactions.create(transaction)
 
-        result = services.transactions.update_category(transaction.id, category.id)
+        transaction.category_id = category.id
+        result = services.transactions.update(transaction, ["category_id"])
 
         assert result is True
 
@@ -197,7 +198,19 @@ class TestTransactionService:
         """Test updating category for non-existent transaction returns False."""
         category = services.categories.create("Test", "Test category")
 
-        result = services.transactions.update_category("nonexistent_id", category.id)
+        # Create a transaction object with non-existent ID
+        fake_transaction = Transaction(
+            id="nonexistent_id",
+            account_id=999,
+            transaction_date=date(2025, 1, 15),
+            post_date=None,
+            description="Fake",
+            bank_category=None,
+            amount=Decimal("10.00"),
+            type="expense",
+        )
+        fake_transaction.category_id = category.id
+        result = services.transactions.update(fake_transaction, ["category_id"])
 
         assert result is False
 
@@ -224,7 +237,7 @@ class TestTransactionService:
             t.category_id = category.id
             transactions.append(t)
 
-        count = services.transactions.batch_update_categories(transactions)
+        count = services.transactions.batch_update(transactions, ["category_id"])
 
         assert count >= 3  # total_changes is cumulative
 
@@ -256,7 +269,7 @@ class TestTransactionService:
             t.auto_category_id = category.id
             transactions.append(t)
 
-        count = services.transactions.batch_update_auto_categories(transactions)
+        count = services.transactions.batch_update(transactions, ["auto_category_id"])
 
         assert count >= 2  # total_changes is cumulative
 
@@ -284,7 +297,11 @@ class TestTransactionService:
         services.transactions.create(transaction)
 
         end_date = date(2025, 12, 15)
-        result = services.transactions.update_amortization(transaction.id, 12, end_date)
+        transaction.amortize_months = 12
+        transaction.amortize_end_date = end_date
+        result = services.transactions.update(
+            transaction, ["amortize_months", "amortize_end_date"]
+        )
 
         assert result is True
 
@@ -316,7 +333,9 @@ class TestTransactionService:
             t.amortize_end_date = date(2025, 11, 15 + i)
             transactions.append(t)
 
-        count = services.transactions.batch_update_amortization(transactions)
+        count = services.transactions.batch_update(
+            transactions, ["amortize_months", "amortize_end_date"]
+        )
 
         assert count >= 2  # total_changes is cumulative
 
@@ -445,7 +464,8 @@ class TestTransactionService:
 
             # Set category for first 3 transactions only
             if i < 3:
-                services.transactions.update_category(t.id, category.id)
+                t.category_id = category.id
+                services.transactions.update(t, ["category_id"])
 
         # Find historical categorized transactions
         found = services.transactions.find_historical_for_categorization(
