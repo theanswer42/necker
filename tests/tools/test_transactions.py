@@ -56,16 +56,18 @@ class TestGetPeriodTransactions:
             date(2024, 1, 31),
         )
 
-        assert "2024/01" in result
-        assert len(result) == 1
+        assert "cash_basis" in result
+        assert "accrual_basis" in result
+        assert "2024/01" in result["cash_basis"]
+        assert len(result["cash_basis"]) == 1
 
         # Cash basis should have only the regular transaction
-        cash_basis = result["2024/01"]["cash_basis"]
+        cash_basis = result["cash_basis"]["2024/01"]
         assert len(cash_basis) == 1
         assert cash_basis[0].description == "Coffee"
 
         # Accrual basis should have the amortized transaction
-        accrual_basis = result["2024/01"]["accrual_basis"]
+        accrual_basis = result["accrual_basis"]["2024/01"]
         assert len(accrual_basis) == 1
         assert accrual_basis[0].description == "Annual Subscription"
         assert accrual_basis[0].amount == Decimal("10.00")
@@ -98,15 +100,15 @@ class TestGetPeriodTransactions:
             date(2024, 3, 31),
         )
 
-        assert len(result) == 3
-        assert "2024/01" in result
-        assert "2024/02" in result
-        assert "2024/03" in result
+        assert len(result["cash_basis"]) == 3
+        assert "2024/01" in result["cash_basis"]
+        assert "2024/02" in result["cash_basis"]
+        assert "2024/03" in result["cash_basis"]
 
         # Each month should have one cash basis transaction
         for month_key in ["2024/01", "2024/02", "2024/03"]:
-            assert len(result[month_key]["cash_basis"]) == 1
-            assert len(result[month_key]["accrual_basis"]) == 0
+            assert len(result["cash_basis"][month_key]) == 1
+            assert len(result["accrual_basis"][month_key]) == 0
 
     def test_cross_year_period(self, services):
         """Test period that crosses year boundaries."""
@@ -136,10 +138,10 @@ class TestGetPeriodTransactions:
             date(2025, 1, 31),
         )
 
-        assert len(result) == 3
-        assert "2024/11" in result
-        assert "2024/12" in result
-        assert "2025/01" in result
+        assert len(result["cash_basis"]) == 3
+        assert "2024/11" in result["cash_basis"]
+        assert "2024/12" in result["cash_basis"]
+        assert "2025/01" in result["cash_basis"]
 
     def test_category_filter(self, services):
         """Test filtering by category IDs."""
@@ -204,11 +206,11 @@ class TestGetPeriodTransactions:
         )
 
         # Should only get Food category transactions
-        cash_basis = result["2024/01"]["cash_basis"]
+        cash_basis = result["cash_basis"]["2024/01"]
         assert len(cash_basis) == 1
         assert cash_basis[0].description == "Coffee"
 
-        accrual_basis = result["2024/01"]["accrual_basis"]
+        accrual_basis = result["accrual_basis"]["2024/01"]
         assert len(accrual_basis) == 1
         assert accrual_basis[0].description == "Food Subscription"
 
@@ -238,19 +240,19 @@ class TestGetPeriodTransactions:
             date(2024, 3, 31),
         )
 
-        assert len(result) == 3
-        assert "2024/01" in result
-        assert "2024/02" in result
-        assert "2024/03" in result
+        assert len(result["cash_basis"]) == 3
+        assert "2024/01" in result["cash_basis"]
+        assert "2024/02" in result["cash_basis"]
+        assert "2024/03" in result["cash_basis"]
 
         # January has transactions
-        assert len(result["2024/01"]["cash_basis"]) == 1
+        assert len(result["cash_basis"]["2024/01"]) == 1
 
         # February and March are empty
-        assert len(result["2024/02"]["cash_basis"]) == 0
-        assert len(result["2024/02"]["accrual_basis"]) == 0
-        assert len(result["2024/03"]["cash_basis"]) == 0
-        assert len(result["2024/03"]["accrual_basis"]) == 0
+        assert len(result["cash_basis"]["2024/02"]) == 0
+        assert len(result["accrual_basis"]["2024/02"]) == 0
+        assert len(result["cash_basis"]["2024/03"]) == 0
+        assert len(result["accrual_basis"]["2024/03"]) == 0
 
     def test_accrued_transaction_spans_multiple_months(self, services):
         """Test that amortized transactions appear in multiple months."""
@@ -281,13 +283,13 @@ class TestGetPeriodTransactions:
         )
 
         # Accrual should appear in Jan, Feb, Mar but not Apr
-        assert len(result["2024/01"]["accrual_basis"]) == 1
-        assert result["2024/01"]["accrual_basis"][0].amount == Decimal("100.00")
+        assert len(result["accrual_basis"]["2024/01"]) == 1
+        assert result["accrual_basis"]["2024/01"][0].amount == Decimal("100.00")
 
-        assert len(result["2024/02"]["accrual_basis"]) == 1
-        assert result["2024/02"]["accrual_basis"][0].amount == Decimal("100.00")
+        assert len(result["accrual_basis"]["2024/02"]) == 1
+        assert result["accrual_basis"]["2024/02"][0].amount == Decimal("100.00")
 
-        assert len(result["2024/03"]["accrual_basis"]) == 1
-        assert result["2024/03"]["accrual_basis"][0].amount == Decimal("100.00")
+        assert len(result["accrual_basis"]["2024/03"]) == 1
+        assert result["accrual_basis"]["2024/03"][0].amount == Decimal("100.00")
 
-        assert len(result["2024/04"]["accrual_basis"]) == 0
+        assert len(result["accrual_basis"]["2024/04"]) == 0

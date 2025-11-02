@@ -11,9 +11,9 @@ def get_period_transactions(
     end_month: date,
     category_ids: Optional[List[int]] = None,
 ) -> Dict[str, Dict[str, List[Transaction]]]:
-    """Get transactions for a period, organized by month and basis.
+    """Get transactions for a period, organized by basis and month.
 
-    Returns transactions grouped by month with both cash and accrual basis views.
+    Returns transactions grouped by basis type (cash/accrual) with monthly breakdowns.
 
     Args:
         services: Services container with transaction service.
@@ -22,23 +22,27 @@ def get_period_transactions(
         category_ids: Optional list of category IDs to filter by.
 
     Returns:
-        Dictionary with month keys (format: "YYYY/MM") and values containing:
-        - "cash_basis": List of non-amortized transactions for that month
-        - "accrual_basis": List of accrued transactions for that month
+        Dictionary with basis type keys ("cash_basis", "accrual_basis") containing
+        month keys (format: "YYYY/MM") mapped to transaction lists:
+        - "cash_basis": Dictionary of months with non-amortized transactions
+        - "accrual_basis": Dictionary of months with accrued transactions
 
     Example:
         {
-            "2024/01": {
-                "cash_basis": [Transaction(...), ...],
-                "accrual_basis": [Transaction(...), ...],
+            "cash_basis": {
+                "2024/01": [Transaction(...), ...],
+                "2024/02": [Transaction(...), ...],
             },
-            "2024/02": {
-                "cash_basis": [...],
-                "accrual_basis": [...],
+            "accrual_basis": {
+                "2024/01": [Transaction(...), ...],
+                "2024/02": [Transaction(...), ...],
             },
         }
     """
-    result = {}
+    result = {
+        "cash_basis": {},
+        "accrual_basis": {},
+    }
 
     # Extract year and month, ignoring day
     current_year = start_month.year
@@ -66,10 +70,8 @@ def get_period_transactions(
             category_ids=category_ids,
         )
 
-        result[month_key] = {
-            "cash_basis": cash_basis,
-            "accrual_basis": accrual_basis,
-        }
+        result["cash_basis"][month_key] = cash_basis
+        result["accrual_basis"][month_key] = accrual_basis
 
         # Move to next month
         current_month += 1
