@@ -5,7 +5,7 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 from models.transaction import Transaction
-from tools.transactions import get_period_transactions
+from tools.transactions import get_period_transactions, get_period_summary
 
 
 class TestGetPeriodTransactions:
@@ -293,3 +293,299 @@ class TestGetPeriodTransactions:
         assert result["accrual_basis"]["2024/03"][0].amount == Decimal("100.00")
 
         assert len(result["accrual_basis"]["2024/04"]) == 0
+
+
+class TestGetPeriodSummary:
+    """Tests for get_period_summary function."""
+
+    def test_basic_summary(self, services):
+        """Test basic summary with income and expenses."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+        category1 = services.categories.create("Food", "Food expenses")
+        category2 = services.categories.create("Transport", "Transportation")
+
+        # Create income transaction
+        t1 = Transaction.create_with_checksum(
+            raw_data="01/05/2024,Salary,2000.00,2000.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 5),
+            post_date=None,
+            description="Salary",
+            bank_category=None,
+            amount=Decimal("2000.00"),
+            type="income",
+        )
+        t1.data_import_id = data_import.id
+        services.transactions.create(t1)
+
+        # Create expense transactions
+        t2 = Transaction.create_with_checksum(
+            raw_data="01/15/2024,Groceries,-150.00,1850.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 15),
+            post_date=None,
+            description="Groceries",
+            bank_category=None,
+            amount=Decimal("150.00"),
+            type="expense",
+        )
+        t2.data_import_id = data_import.id
+        t2.category_id = category1.id
+        services.transactions.create(t2)
+
+        t3 = Transaction.create_with_checksum(
+            raw_data="01/20/2024,Gas,-50.00,1800.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 20),
+            post_date=None,
+            description="Gas",
+            bank_category=None,
+            amount=Decimal("50.00"),
+            type="expense",
+        )
+        t3.data_import_id = data_import.id
+        t3.category_id = category2.id
+        services.transactions.create(t3)
+
+        # Get summary
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 1, 31),
+        )
+
+        # Check cash basis summary
+        summary = result["cash_basis"]["2024/01"]
+        assert summary["income_total"] == Decimal("2000.00")
+        assert summary["expense_total"] == Decimal("200.00")
+        assert summary["net"] == Decimal("1800.00")
+        assert summary["expenses_by_category"][category1.id] == Decimal("150.00")
+        assert summary["expenses_by_category"][category2.id] == Decimal("50.00")
+
+    def test_uncategorized_expenses(self, services):
+        """Test that uncategorized expenses use category_id=0."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        # Create expense without category
+        t = Transaction.create_with_checksum(
+            raw_data="01/15/2024,Mystery,-100.00,900.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 15),
+            post_date=None,
+            description="Mystery expense",
+            bank_category=None,
+            amount=Decimal("100.00"),
+            type="expense",
+        )
+        t.data_import_id = data_import.id
+        # No category_id set
+        services.transactions.create(t)
+
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 1, 31),
+        )
+
+        summary = result["cash_basis"]["2024/01"]
+        assert summary["expense_total"] == Decimal("100.00")
+        assert summary["expenses_by_category"][0] == Decimal("100.00")
+
+    def test_multiple_expenses_same_category(self, services):
+        """Test that multiple expenses in the same category are summed."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+        category = services.categories.create("Food", "Food expenses")
+
+        # Create multiple food expenses
+        for i in range(3):
+            t = Transaction.create_with_checksum(
+                raw_data=f"01/{10 + i}/2024,Food{i},-50.00,{950 - i * 50}.00",
+                account_id=account.id,
+                transaction_date=date(2024, 1, 10 + i),
+                post_date=None,
+                description=f"Food {i}",
+                bank_category=None,
+                amount=Decimal("50.00"),
+                type="expense",
+            )
+            t.data_import_id = data_import.id
+            t.category_id = category.id
+            services.transactions.create(t)
+
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 1, 31),
+        )
+
+        summary = result["cash_basis"]["2024/01"]
+        assert summary["expense_total"] == Decimal("150.00")
+        assert summary["expenses_by_category"][category.id] == Decimal("150.00")
+
+    def test_accrual_basis_summary(self, services):
+        """Test summary for accrual basis with amortized transactions."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+        category = services.categories.create("Subscriptions", "Subscription services")
+
+        # Create amortized transaction
+        t = Transaction.create_with_checksum(
+            raw_data="01/15/2024,Annual,-120.00,1000.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 15),
+            post_date=None,
+            description="Annual Subscription",
+            bank_category=None,
+            amount=Decimal("120.00"),
+            type="expense",
+        )
+        t.data_import_id = data_import.id
+        t.category_id = category.id
+        t.amortize_months = 12
+        t.amortize_end_date = t.transaction_date + relativedelta(months=11, day=31)
+        services.transactions.create(t)
+
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 1, 31),
+        )
+
+        # Cash basis should be empty (transaction is amortized)
+        cash_summary = result["cash_basis"]["2024/01"]
+        assert cash_summary["expense_total"] == Decimal("0")
+        assert len(cash_summary["expenses_by_category"]) == 0
+
+        # Accrual basis should show monthly amount
+        accrual_summary = result["accrual_basis"]["2024/01"]
+        assert accrual_summary["expense_total"] == Decimal("10.00")
+        assert accrual_summary["expenses_by_category"][category.id] == Decimal("10.00")
+
+    def test_empty_month_summary(self, services):
+        """Test that empty months have zero values."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        # Create transaction only in January
+        t = Transaction.create_with_checksum(
+            raw_data="01/15/2024,Coffee,-5.00,1000.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 15),
+            post_date=None,
+            description="Coffee",
+            bank_category=None,
+            amount=Decimal("5.00"),
+            type="expense",
+        )
+        t.data_import_id = data_import.id
+        services.transactions.create(t)
+
+        # Get Jan-Mar summary
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 3, 31),
+        )
+
+        # January has data
+        jan_summary = result["cash_basis"]["2024/01"]
+        assert jan_summary["expense_total"] == Decimal("5.00")
+
+        # February and March are empty
+        feb_summary = result["cash_basis"]["2024/02"]
+        assert feb_summary["income_total"] == Decimal("0")
+        assert feb_summary["expense_total"] == Decimal("0")
+        assert feb_summary["net"] == Decimal("0")
+        assert len(feb_summary["expenses_by_category"]) == 0
+
+        mar_summary = result["cash_basis"]["2024/03"]
+        assert mar_summary["income_total"] == Decimal("0")
+        assert mar_summary["expense_total"] == Decimal("0")
+        assert mar_summary["net"] == Decimal("0")
+        assert len(mar_summary["expenses_by_category"]) == 0
+
+    def test_category_filter(self, services):
+        """Test filtering by category IDs."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+        category1 = services.categories.create("Food", "Food expenses")
+        category2 = services.categories.create("Transport", "Transportation")
+
+        # Create expenses in different categories
+        t1 = Transaction.create_with_checksum(
+            raw_data="01/15/2024,Food,-100.00,900.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 15),
+            post_date=None,
+            description="Food",
+            bank_category=None,
+            amount=Decimal("100.00"),
+            type="expense",
+        )
+        t1.data_import_id = data_import.id
+        t1.category_id = category1.id
+        services.transactions.create(t1)
+
+        t2 = Transaction.create_with_checksum(
+            raw_data="01/20/2024,Gas,-50.00,850.00",
+            account_id=account.id,
+            transaction_date=date(2024, 1, 20),
+            post_date=None,
+            description="Gas",
+            bank_category=None,
+            amount=Decimal("50.00"),
+            type="expense",
+        )
+        t2.data_import_id = data_import.id
+        t2.category_id = category2.id
+        services.transactions.create(t2)
+
+        # Filter by category1 only
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 1, 31),
+            category_ids=[category1.id],
+        )
+
+        summary = result["cash_basis"]["2024/01"]
+        # Should only include food expense
+        assert summary["expense_total"] == Decimal("100.00")
+        assert summary["expenses_by_category"][category1.id] == Decimal("100.00")
+        assert category2.id not in summary["expenses_by_category"]
+
+    def test_multi_month_summary(self, services):
+        """Test summary across multiple months."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+        category = services.categories.create("Food", "Food expenses")
+
+        # Create expenses in different months
+        for month in [1, 2, 3]:
+            t = Transaction.create_with_checksum(
+                raw_data=f"0{month}/15/2024,Food{month},-{month * 100}.00,1000.00",
+                account_id=account.id,
+                transaction_date=date(2024, month, 15),
+                post_date=None,
+                description=f"Food {month}",
+                bank_category=None,
+                amount=Decimal(f"{month * 100}.00"),
+                type="expense",
+            )
+            t.data_import_id = data_import.id
+            t.category_id = category.id
+            services.transactions.create(t)
+
+        result = get_period_summary(
+            services,
+            date(2024, 1, 1),
+            date(2024, 3, 31),
+        )
+
+        # Check each month
+        assert result["cash_basis"]["2024/01"]["expense_total"] == Decimal("100.00")
+        assert result["cash_basis"]["2024/02"]["expense_total"] == Decimal("200.00")
+        assert result["cash_basis"]["2024/03"]["expense_total"] == Decimal("300.00")
