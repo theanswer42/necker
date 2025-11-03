@@ -8,12 +8,12 @@ from models.transaction import Transaction
 
 # SQL Query Constants
 _TRANSACTION_SELECT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
-       description, bank_category, category_id, auto_category_id, amount, transaction_type,
-       additional_metadata, amortize_months, amortize_end_date"""
+       description, bank_category, category_id, auto_category_id, merchant_name, auto_merchant_name,
+       amount, transaction_type, additional_metadata, amortize_months, amortize_end_date"""
 
 _TRANSACTION_INSERT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
-    description, bank_category, category_id, auto_category_id, amount, transaction_type,
-    additional_metadata, amortize_months, amortize_end_date"""
+    description, bank_category, category_id, auto_category_id, merchant_name, auto_merchant_name,
+    amount, transaction_type, additional_metadata, amortize_months, amortize_end_date"""
 
 # Automatically generate placeholders from field count
 _TRANSACTION_INSERT_PLACEHOLDERS = (
@@ -64,6 +64,8 @@ class TransactionService:
                     transaction.bank_category,
                     transaction.category_id,
                     transaction.auto_category_id,
+                    transaction.merchant_name,
+                    transaction.auto_merchant_name,
                     float(transaction.amount),
                     transaction.type,
                     (
@@ -111,6 +113,8 @@ class TransactionService:
                     t.bank_category,
                     t.category_id,
                     t.auto_category_id,
+                    t.merchant_name,
+                    t.auto_merchant_name,
                     float(t.amount),
                     t.type,
                     json.dumps(t.additional_metadata)
@@ -143,7 +147,8 @@ class TransactionService:
         Args:
             transactions: List of Transaction objects to update.
             field_names: List of field names to update. Supported fields:
-                        'category_id', 'auto_category_id', 'amortize_months', 'amortize_end_date'
+                        'category_id', 'auto_category_id', 'merchant_name', 'auto_merchant_name',
+                        'amortize_months', 'amortize_end_date'
 
         Returns:
             Number of transactions successfully updated.
@@ -162,6 +167,8 @@ class TransactionService:
         supported_fields = {
             "category_id",
             "auto_category_id",
+            "merchant_name",
+            "auto_merchant_name",
             "amortize_months",
             "amortize_end_date",
         }
@@ -487,12 +494,14 @@ class TransactionService:
             post_date=date.fromisoformat(row[4]) if row[4] else None,
             description=row[5],
             bank_category=row[6],
-            amount=Decimal(str(row[9])),
-            type=row[10],
-            additional_metadata=json.loads(row[11]) if row[11] else None,
+            amount=Decimal(str(row[11])),
+            type=row[12],
+            additional_metadata=json.loads(row[13]) if row[13] else None,
             data_import_id=row[2],
             category_id=row[7],
             auto_category_id=row[8],
-            amortize_months=row[12],
-            amortize_end_date=date.fromisoformat(row[13]) if row[13] else None,
+            merchant_name=row[9],
+            auto_merchant_name=row[10],
+            amortize_months=row[14],
+            amortize_end_date=date.fromisoformat(row[15]) if row[15] else None,
         )

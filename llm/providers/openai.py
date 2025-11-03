@@ -18,6 +18,7 @@ class TransactionCategorization(BaseModel):
 
     transaction_id: str
     category_id: Optional[int] = None
+    merchant_name: Optional[str] = None
     reasoning: Optional[str] = None
 
 
@@ -121,6 +122,7 @@ class OpenAIProvider(LLMProvider):
                     CategorySuggestion(
                         transaction_id=cat.transaction_id,
                         category_id=cat.category_id,
+                        merchant_name=cat.merchant_name,
                         confidence=None,  # OpenAI doesn't provide confidence scores
                         reasoning=cat.reasoning,
                     )
@@ -162,11 +164,14 @@ class OpenAIProvider(LLMProvider):
         lines = []
         for txn in transactions[:50]:  # Limit to 50 examples to avoid token limits
             category_name = cat_lookup.get(txn.category_id, "Unknown")
+            merchant_part = (
+                f", Merchant: '{txn.merchant_name}'" if txn.merchant_name else ""
+            )
             lines.append(
                 f"- Description: '{txn.description}', "
                 f"Amount: ${txn.amount}, "
                 f"Type: {txn.type}, "
-                f"Category: {category_name} (ID {txn.category_id})"
+                f"Category: {category_name} (ID {txn.category_id}){merchant_part}"
             )
 
         return "\n".join(lines)
