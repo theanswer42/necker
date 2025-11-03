@@ -395,9 +395,8 @@ def cmd_update_from_csv(args, services):
                 sys.exit(1)
 
             # Process each row
-            category_updates = []
-            merchant_updates = []
-            amortization_updates = []
+            # Dictionary mapping transaction_id -> (transaction, set of fields to update)
+            transactions_to_update = {}
             category_updated_count = 0
             accepted_auto_count = 0
             merchant_updated_count = 0
@@ -421,9 +420,6 @@ def cmd_update_from_csv(args, services):
                     continue
 
                 # Process category updates
-                new_category_id = None
-                category_changed = False
-
                 if category_name:
                     # User provided a category - use it
                     if category_name not in category_name_to_id:
@@ -437,43 +433,55 @@ def cmd_update_from_csv(args, services):
                     # Only update if category has changed
                     if transaction.category_id != new_category_id:
                         transaction.category_id = new_category_id
-                        category_updates.append(transaction)
+                        if transaction_id not in transactions_to_update:
+                            transactions_to_update[transaction_id] = (
+                                transaction,
+                                set(),
+                            )
+                        transactions_to_update[transaction_id][1].add("category_id")
                         category_updated_count += 1
-                        category_changed = True
                 else:
                     # No user category - accept auto category if available
                     if auto_category_name and transaction.auto_category_id:
                         # Only update if category_id is different from auto_category_id
                         if transaction.category_id != transaction.auto_category_id:
                             transaction.category_id = transaction.auto_category_id
-                            category_updates.append(transaction)
+                            if transaction_id not in transactions_to_update:
+                                transactions_to_update[transaction_id] = (
+                                    transaction,
+                                    set(),
+                                )
+                            transactions_to_update[transaction_id][1].add("category_id")
                             accepted_auto_count += 1
-                            category_changed = True
 
                 # Process merchant name updates
-                merchant_changed = False
-
                 if merchant_name:
                     # User provided a merchant name - use it
                     # Only update if merchant_name has changed
                     if transaction.merchant_name != merchant_name:
                         transaction.merchant_name = merchant_name
-                        # Only add if not already in category_updates
-                        if not category_changed:
-                            merchant_updates.append(transaction)
+                        if transaction_id not in transactions_to_update:
+                            transactions_to_update[transaction_id] = (
+                                transaction,
+                                set(),
+                            )
+                        transactions_to_update[transaction_id][1].add("merchant_name")
                         merchant_updated_count += 1
-                        merchant_changed = True
                 else:
                     # No user merchant name - accept auto merchant name if available
                     if auto_merchant_name and transaction.auto_merchant_name:
                         # Only update if merchant_name is different from auto_merchant_name
                         if transaction.merchant_name != transaction.auto_merchant_name:
                             transaction.merchant_name = transaction.auto_merchant_name
-                            # Only add if not already in other update lists
-                            if not category_changed and not merchant_changed:
-                                merchant_updates.append(transaction)
+                            if transaction_id not in transactions_to_update:
+                                transactions_to_update[transaction_id] = (
+                                    transaction,
+                                    set(),
+                                )
+                            transactions_to_update[transaction_id][1].add(
+                                "merchant_name"
+                            )
                             accepted_auto_merchant_count += 1
-                            merchant_changed = True
 
                 # Process amortization updates
                 if amortize_months_str:
@@ -498,23 +506,28 @@ def cmd_update_from_csv(args, services):
                             transaction.amortize_months = amortize_months
                             transaction.amortize_end_date = amortize_end_date
 
-                            # Only add if not already in category_updates or merchant_updates
-                            if not category_changed and not merchant_changed:
-                                amortization_updates.append(transaction)
+                            if transaction_id not in transactions_to_update:
+                                transactions_to_update[transaction_id] = (
+                                    transaction,
+                                    set(),
+                                )
+                            transactions_to_update[transaction_id][1].add(
+                                "amortize_months"
+                            )
+                            transactions_to_update[transaction_id][1].add(
+                                "amortize_end_date"
+                            )
                             amortization_updated_count += 1
                     except ValueError:
                         logger.warning(
                             f"Invalid amortize_months value '{amortize_months_str}' for transaction {transaction_id[:8]}..., skipping"
                         )
 
-        # Combine updates
-        all_updates = category_updates + merchant_updates + amortization_updates
-
-        if not all_updates:
+        if not transactions_to_update:
             logger.info("No updates needed.")
             return
 
-        logger.info(f"\nUpdating {len(all_updates)} transaction(s)...")
+        logger.info(f"\nUpdating {len(transactions_to_update)} transaction(s)...")
         logger.info(f"  Category manual updates: {category_updated_count}")
         logger.info(f"  Category auto-accepted: {accepted_auto_count}")
         logger.info(f"  Merchant manual updates: {merchant_updated_count}")
@@ -523,32 +536,18 @@ def cmd_update_from_csv(args, services):
         if skipped_count > 0:
             logger.info(f"  Skipped: {skipped_count}")
 
-        # Batch update categories
-        if category_updates:
+        # Batch update each transaction with its specific fields
+        total_updated = 0
+        for transaction_id, (
+            transaction,
+            fields_to_update,
+        ) in transactions_to_update.items():
             updated = services.transactions.batch_update(
-                category_updates, ["category_id"]
+                [transaction], list(fields_to_update)
             )
-            logger.info(
-                f"\n✓ Successfully updated categories for {updated} transaction(s)"
-            )
+            total_updated += updated
 
-        # Update merchant names
-        if merchant_updates:
-            updated = services.transactions.batch_update(
-                merchant_updates, ["merchant_name"]
-            )
-            logger.info(
-                f"✓ Successfully updated merchant names for {updated} transaction(s)"
-            )
-
-        # Update amortization
-        if amortization_updates:
-            updated = services.transactions.batch_update(
-                amortization_updates, ["amortize_months", "amortize_end_date"]
-            )
-            logger.info(
-                f"✓ Successfully updated amortization for {updated} transaction(s)"
-            )
+        logger.info(f"\n✓ Successfully updated {total_updated} transaction(s)")
 
     except csv.Error as e:
         logger.error(f"Error reading CSV file: {e}")
