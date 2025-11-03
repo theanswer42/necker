@@ -101,10 +101,10 @@ def cmd_ingest(args, services):
             try:
                 logger.info("\nRunning auto-categorization...")
 
-                # Get historical transactions for training (last 90 days, manually categorized)
+                # Get historical transactions for training (most recent manually categorized)
                 historical_transactions = (
                     services.transactions.find_historical_for_categorization(
-                        account.id, days=90
+                        account.id, limit=200
                     )
                 )
                 logger.info(

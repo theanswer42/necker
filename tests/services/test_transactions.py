@@ -442,10 +442,10 @@ class TestTransactionService:
         # Create transactions with different dates and categories
         today = date.today()
         dates = [
-            today - timedelta(days=30),  # Within 90 days, has category
-            today - timedelta(days=60),  # Within 90 days, has category
-            today - timedelta(days=100),  # Outside 90 days, has category
-            today - timedelta(days=30),  # Within 90 days, no category
+            today - timedelta(days=30),  # Recent, has category
+            today - timedelta(days=60),  # Mid-range, has category
+            today - timedelta(days=100),  # Old, has category
+            today - timedelta(days=30),  # Recent, no category
         ]
 
         for i, txn_date in enumerate(dates):
@@ -469,11 +469,49 @@ class TestTransactionService:
 
         # Find historical categorized transactions
         found = services.transactions.find_historical_for_categorization(
-            account.id, days=90
+            account.id, limit=200
         )
 
-        # Should only return transactions within 90 days that have a category
-        assert len(found) == 2
+        # Should return all 3 transactions that have a category, regardless of age
+        assert len(found) == 3
+        # Should be ordered by date (newest first)
+        assert found[0].transaction_date == today - timedelta(days=30)
+        assert found[1].transaction_date == today - timedelta(days=60)
+        assert found[2].transaction_date == today - timedelta(days=100)
+
+    def test_find_historical_for_categorization_with_limit(self, services):
+        """Test that limit parameter correctly restricts results."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+        category = services.categories.create("Food", "Food expenses")
+
+        # Create 5 categorized transactions
+        today = date.today()
+        for i in range(5):
+            t = Transaction.create_with_checksum(
+                raw_data=f"{(today - timedelta(days=i)).isoformat()},TX{i},-10.00,1000.00",
+                account_id=account.id,
+                transaction_date=today - timedelta(days=i),
+                post_date=None,
+                description=f"Transaction {i}",
+                bank_category=None,
+                amount=Decimal("10.00"),
+                type="expense",
+            )
+            t.data_import_id = data_import.id
+            t.category_id = category.id
+            services.transactions.create(t)
+
+        # Find with limit of 3
+        found = services.transactions.find_historical_for_categorization(
+            account.id, limit=3
+        )
+
+        # Should only return 3 most recent transactions
+        assert len(found) == 3
+        assert found[0].transaction_date == today
+        assert found[1].transaction_date == today - timedelta(days=1)
+        assert found[2].transaction_date == today - timedelta(days=2)
 
     def test_transaction_with_metadata(self, services):
         """Test creating and retrieving transaction with additional metadata."""

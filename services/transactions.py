@@ -2,7 +2,7 @@
 
 import json
 from typing import List, Optional
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from models.transaction import Transaction
 
@@ -250,23 +250,21 @@ class TransactionService:
             return [self._row_to_transaction(row) for row in rows]
 
     def find_historical_for_categorization(
-        self, account_id: int, days: int = 90
+        self, account_id: int, limit: int = 200
     ) -> List[Transaction]:
         """Get historical categorized transactions for use in auto-categorization.
 
-        Fetches transactions from the specified account that:
-        - Are within the last N days
-        - Have a manually-set category (category_id is not NULL)
+        Fetches the most recent transactions from the specified account that have
+        a manually-set category (category_id is not NULL). This approach works
+        regardless of transaction age, making it suitable for historical data imports.
 
         Args:
             account_id: The account ID to filter by.
-            days: Number of days to look back (default 90).
+            limit: Maximum number of transactions to return (default 200).
 
         Returns:
             List of Transaction objects with manual categories, ordered by date (newest first).
         """
-        cutoff_date = (date.today() - timedelta(days=days)).isoformat()
-
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
                 f"""
@@ -274,10 +272,10 @@ class TransactionService:
                 FROM transactions
                 WHERE account_id = ?
                   AND category_id IS NOT NULL
-                  AND transaction_date >= ?
                 ORDER BY transaction_date DESC, id
+                LIMIT ?
                 """,
-                (account_id, cutoff_date),
+                (account_id, limit),
             )
             rows = cursor.fetchall()
 
