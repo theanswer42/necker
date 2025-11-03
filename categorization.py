@@ -82,16 +82,22 @@ def auto_categorize(
             transactions, categories, historical_transactions
         )
 
-        # Create lookup map of transaction_id -> category_id
-        suggestion_map = {s.transaction_id: s.category_id for s in suggestions}
+        # Create lookup maps for category_id and merchant_name
+        suggestion_map = {s.transaction_id: s for s in suggestions}
 
-        # Update transactions with auto_category_id
+        # Update transactions with auto_category_id and auto_merchant_name
         for txn in transactions:
             if txn.id in suggestion_map:
-                txn.auto_category_id = suggestion_map[txn.id]
+                suggestion = suggestion_map[txn.id]
+                txn.auto_category_id = suggestion.category_id
+                txn.auto_merchant_name = suggestion.merchant_name
                 if txn.auto_category_id is not None:
                     logger.debug(
                         f"Transaction {txn.id[:8]}... auto-categorized as {txn.auto_category_id}"
+                    )
+                if txn.auto_merchant_name is not None:
+                    logger.debug(
+                        f"Transaction {txn.id[:8]}... merchant detected as '{txn.auto_merchant_name}'"
                     )
 
         categorized_count = sum(

@@ -22,6 +22,8 @@ class Transaction:
     )
     category_id: Optional[int] = None  # user-defined category
     auto_category_id: Optional[int] = None  # LLM-suggested category
+    merchant_name: Optional[str] = None  # user-defined merchant name
+    auto_merchant_name: Optional[str] = None  # LLM-suggested merchant name
     amortize_months: Optional[int] = None  # number of months to amortize over
     amortize_end_date: Optional[date] = None  # calculated end date for amortization
     accrued: bool = (
@@ -66,6 +68,8 @@ class Transaction:
             "bank_category": self.bank_category,
             "category_id": self.category_id,
             "auto_category_id": self.auto_category_id,
+            "merchant_name": self.merchant_name,
+            "auto_merchant_name": self.auto_merchant_name,
             "amount": float(self.amount),
             "transaction_type": self.type,
             "raw_data": None,  # Will be set by ingestion module

@@ -13,6 +13,7 @@ class CategorySuggestion:
 
     transaction_id: str
     category_id: Optional[int]
+    merchant_name: Optional[str] = None  # Detected merchant name
     confidence: Optional[float] = None  # 0.0 to 1.0, if provider supports it
     reasoning: Optional[str] = None  # Why this category was chosen
 

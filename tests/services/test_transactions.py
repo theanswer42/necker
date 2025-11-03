@@ -938,3 +938,106 @@ class TestTransactionService:
 
         # Should be empty since transaction has no amortization
         assert len(accrued) == 0
+
+    def test_create_transaction_with_merchant_name(self, services):
+        """Test creating a transaction with merchant_name fields."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        transaction = Transaction.create_with_checksum(
+            raw_data="01/15/2025,AMAZON.COM*123ABC,-25.00,1000.00",
+            account_id=account.id,
+            transaction_date=date(2025, 1, 15),
+            post_date=None,
+            description="AMAZON.COM*123ABC",
+            bank_category=None,
+            amount=Decimal("25.00"),
+            type="expense",
+        )
+        transaction.data_import_id = data_import.id
+        transaction.merchant_name = "Amazon"
+        transaction.auto_merchant_name = "Amazon"
+
+        created = services.transactions.create(transaction)
+
+        # Retrieve and verify
+        found = services.transactions.find(created.id)
+        assert found is not None
+        assert found.merchant_name == "Amazon"
+        assert found.auto_merchant_name == "Amazon"
+
+    def test_batch_update_merchant_names(self, services):
+        """Test batch updating merchant_name and auto_merchant_name."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        # Create transactions
+        t1 = Transaction.create_with_checksum(
+            raw_data="01/15/2025,AMAZON.COM,-25.00,1000.00",
+            account_id=account.id,
+            transaction_date=date(2025, 1, 15),
+            post_date=None,
+            description="AMAZON.COM",
+            bank_category=None,
+            amount=Decimal("25.00"),
+            type="expense",
+        )
+        t1.data_import_id = data_import.id
+        services.transactions.create(t1)
+
+        t2 = Transaction.create_with_checksum(
+            raw_data="01/20/2025,STARBUCKS,-5.00,995.00",
+            account_id=account.id,
+            transaction_date=date(2025, 1, 20),
+            post_date=None,
+            description="STARBUCKS",
+            bank_category=None,
+            amount=Decimal("5.00"),
+            type="expense",
+        )
+        t2.data_import_id = data_import.id
+        services.transactions.create(t2)
+
+        # Update merchant names
+        t1.merchant_name = "Amazon"
+        t2.merchant_name = "Starbucks"
+
+        updated_count = services.transactions.batch_update([t1, t2], ["merchant_name"])
+
+        assert updated_count == 2
+
+        # Verify updates
+        found_t1 = services.transactions.find(t1.id)
+        found_t2 = services.transactions.find(t2.id)
+
+        assert found_t1.merchant_name == "Amazon"
+        assert found_t2.merchant_name == "Starbucks"
+
+    def test_batch_update_auto_merchant_names(self, services):
+        """Test batch updating auto_merchant_name."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        t1 = Transaction.create_with_checksum(
+            raw_data="01/15/2025,WAL-MART #123,-50.00,1000.00",
+            account_id=account.id,
+            transaction_date=date(2025, 1, 15),
+            post_date=None,
+            description="WAL-MART #123",
+            bank_category=None,
+            amount=Decimal("50.00"),
+            type="expense",
+        )
+        t1.data_import_id = data_import.id
+        services.transactions.create(t1)
+
+        # Update auto_merchant_name
+        t1.auto_merchant_name = "Walmart"
+
+        updated_count = services.transactions.batch_update([t1], ["auto_merchant_name"])
+
+        assert updated_count == 1
+
+        # Verify
+        found = services.transactions.find(t1.id)
+        assert found.auto_merchant_name == "Walmart"
