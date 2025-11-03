@@ -47,6 +47,9 @@ Check migration status:
 uv run python -m cli migrate status
 ```
 
+### 2. Seed categories
+
+
 ### 2. Create Accounts
 
 Create an account for each financial institution:

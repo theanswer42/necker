@@ -238,7 +238,7 @@ def cmd_export(args, services):
 
             logger.info(f"Exporting transactions for {year}/{month:02d}")
             transactions = services.transactions.get_transactions_by_month(
-                year, month, account_id
+                year, month, account_id=account_id
             )
         else:
             # Parse start and end dates in format YYYY/MM/DD
@@ -252,7 +252,7 @@ def cmd_export(args, services):
 
             logger.info(f"Exporting transactions from {start_date} to {end_date}")
             transactions = services.transactions.get_transactions_by_date_range(
-                start_date, end_date, account_id
+                start_date, end_date, account_id=account_id
             )
 
     except (ValueError, IndexError) as e:
@@ -302,7 +302,6 @@ def cmd_export(args, services):
                     "amount",
                     "transaction_type",
                     "data_import_id",
-                    "created_at",
                     "amortize_months",
                     "amortize_end_date",
                 ]
@@ -329,7 +328,6 @@ def cmd_export(args, services):
                         float(t.amount),
                         t.type,
                         t.data_import_id,
-                        "",  # created_at - not available on Transaction model
                         t.amortize_months or "",
                         (
                             t.amortize_end_date.isoformat()
@@ -387,7 +385,6 @@ def cmd_update_from_csv(args, services):
                 "amount",
                 "transaction_type",
                 "data_import_id",
-                "created_at",
                 "amortize_months",
                 "amortize_end_date",
             }

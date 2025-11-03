@@ -91,6 +91,21 @@ class TestRowToTransaction:
 
         assert transaction.type == "transfer"
 
+    def test_detect_bofa_credit_card_transfer(self):
+        """Test detection of Bank of America credit card payment as transfer."""
+        row = [
+            "01/15/2025",
+            "BANK OF AMERICA CREDIT CARD Bill Payment",
+            "-400.00",
+            "1,000.00",
+        ]
+        account_id = 1
+
+        transaction = row_to_transaction(row, account_id)
+
+        assert transaction.type == "transfer"
+        assert transaction.amount == Decimal("400.00")
+
     def test_missing_date_raises_error(self):
         """Test that missing date field raises ValueError."""
         row = ["", "DESCRIPTION", "-100.00", "1,000.00"]

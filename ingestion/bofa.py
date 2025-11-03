@@ -52,6 +52,7 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
         "DISCOVER DES:E-PAYMENT",
         "CHASE CREDIT CRD DES:AUTOPAY",
         "AMERICAN EXPRESS DES:ACH PMT",
+        "BANK OF AMERICA CREDIT CARD Bill Payment",
     )
 
     if any(description.startswith(prefix) for prefix in credit_card_payment_prefixes):
