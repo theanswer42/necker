@@ -129,8 +129,8 @@ def cmd_ingest(args, services):
                 ]
 
                 if to_update:
-                    updated_count = services.transactions.batch_update_auto_categories(
-                        to_update
+                    updated_count = services.transactions.batch_update(
+                        to_update, ["auto_category_id"]
                     )
                     logger.info(f"✓ Auto-categorized {updated_count} transaction(s)")
                 else:
@@ -179,7 +179,8 @@ def cmd_set_category(args, services):
 
     # Update transaction category_id
     try:
-        success = services.transactions.update_category(transaction_id, category.id)
+        transaction.category_id = category.id
+        success = services.transactions.update(transaction, ["category_id"])
 
         if not success:
             logger.error("Failed to update transaction.")
@@ -452,10 +453,11 @@ def cmd_update_from_csv(args, services):
 
                         # Check if amortization has changed
                         if transaction.amortize_months != amortize_months:
-                            # Calculate new amortize_end_date
+                            # Calculate new amortize_end_date using month-boundary convention
+                            # End on last day of month before the actual anniversary date
                             amortize_end_date = (
                                 transaction.transaction_date
-                                + relativedelta(months=amortize_months)
+                                + relativedelta(months=amortize_months - 1, day=31)
                             )
 
                             # Update fields
@@ -487,15 +489,17 @@ def cmd_update_from_csv(args, services):
 
         # Batch update categories
         if category_updates:
-            updated = services.transactions.batch_update_categories(category_updates)
+            updated = services.transactions.batch_update(
+                category_updates, ["category_id"]
+            )
             logger.info(
                 f"\n✓ Successfully updated categories for {updated} transaction(s)"
             )
 
         # Update amortization
         if amortization_updates:
-            updated = services.transactions.batch_update_amortization(
-                amortization_updates
+            updated = services.transactions.batch_update(
+                amortization_updates, ["amortize_months", "amortize_end_date"]
             )
             logger.info(
                 f"✓ Successfully updated amortization for {updated} transaction(s)"
@@ -532,13 +536,20 @@ def cmd_set_amortization(args, services):
         logger.error(f"Transaction with ID '{transaction_id}' not found.")
         sys.exit(1)
 
-    # Calculate amortize_end_date
-    amortize_end_date = transaction.transaction_date + relativedelta(months=months)
+    # Calculate amortize_end_date using month-boundary convention:
+    # - Give full month accrual to any month the transaction touches
+    # - End on last day of month before the actual anniversary date
+    # Example: Jan 15, 2024 + 12 months → Dec 31, 2024 (not Jan 15, 2025)
+    amortize_end_date = transaction.transaction_date + relativedelta(
+        months=months - 1, day=31
+    )
 
     # Update transaction
     try:
-        success = services.transactions.update_amortization(
-            transaction_id, months, amortize_end_date
+        transaction.amortize_months = months
+        transaction.amortize_end_date = amortize_end_date
+        success = services.transactions.update(
+            transaction, ["amortize_months", "amortize_end_date"]
         )
 
         if not success:

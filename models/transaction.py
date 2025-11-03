@@ -24,6 +24,9 @@ class Transaction:
     auto_category_id: Optional[int] = None  # LLM-suggested category
     amortize_months: Optional[int] = None  # number of months to amortize over
     amortize_end_date: Optional[date] = None  # calculated end date for amortization
+    accrued: bool = (
+        False  # runtime-only flag indicating this is a virtual accrued transaction
+    )
 
     @classmethod
     def create_with_checksum(
