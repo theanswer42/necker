@@ -4,8 +4,9 @@
       {
         "matcher": "Write|Edit",
         "hooks": [
-          {
-            "command": "if [[ \"$FILE_PATH\" == *.py ]]; then uv run ruff format \"$FILE_PATH\"; fi"
+            {
+                "type": "command",
+                "command": "if [[ \"$FILE_PATH\" == *.py ]]; then uv run ruff format \"$FILE_PATH\"; fi"
           }
         ]
       }
