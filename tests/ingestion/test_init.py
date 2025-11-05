@@ -3,6 +3,7 @@ import pytest
 from ingestion import get_ingestion_module, get_available_modules
 import ingestion.amex as amex
 import ingestion.bofa as bofa
+import ingestion.bofacc as bofacc
 import ingestion.chase as chase
 import ingestion.discover as discover
 
@@ -24,6 +25,11 @@ class TestGetIngestionModule:
         """Test retrieving the chase module."""
         module = get_ingestion_module("chase")
         assert module == chase
+
+    def test_get_bofacc_module(self):
+        """Test retrieving the bofacc module."""
+        module = get_ingestion_module("bofacc")
+        assert module == bofacc
 
     def test_get_discover_module(self):
         """Test retrieving the discover module."""
@@ -47,7 +53,7 @@ class TestGetAvailableModules:
     def test_returns_all_modules(self):
         """Test that all expected modules are returned."""
         modules = get_available_modules()
-        assert set(modules) == {"amex", "bofa", "chase", "discover"}
+        assert set(modules) == {"amex", "bofa", "bofacc", "chase", "discover"}
 
     def test_returns_list(self):
         """Test that the return value is a list."""

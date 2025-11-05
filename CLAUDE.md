@@ -27,7 +27,7 @@ This ensures commands use the correct virtual environment managed by `uv`.
 
 ### Running the Application
 ```bash
-uv run python main.py
+uv run python -m cli
 ```
 
 ### Development Tools
@@ -41,14 +41,17 @@ uv sync --group dev
 ```
 
 ## Project Structure
-
-- `main.py` - Entry point with basic "Hello from necker!" output
-- `samples/` - Contains sample CSV files from different banks (scan only when specifically needed for tasks):
-  - `amex.csv` - American Express transaction format
-  - `bofa.csv` - Bank of America transaction format  
-  - `chase.csv` - Chase transaction format
-- `pyproject.toml` - Project configuration and dependencies
-- `uv.lock` - Dependency lock file
+- `models/` contains our data models
+- `cli/` contains the cli package. Modules in this package implement
+  various subcommands needed.
+- `ingestion/` contains ingestion modules - these convert CSVs from
+  various financial institutions to Transaction objects
+- `db/` contains code for database connection management, and
+  migrations
+- `llm/` contains code and prompts to communicate with LLMs
+- `services/` contains code for relatively simple queries on the
+  database
+- `tools/` contains higher level tools that make use of the services
 
 ## Important Notes
 
