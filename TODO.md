@@ -10,7 +10,8 @@ Issues identified during code review, ordered by estimated effort (least to most
 - [x] **Fix `total_changes` bug in `bulk_create`** — `services/transactions.py:140` uses `conn.total_changes` which counts all changes on the connection, not just the last `executemany`. Use `cursor.rowcount` instead.
   - **Plan**: Capture cursor from `conn.executemany(...)` and return `cursor.rowcount`. Add a test that verifies the count is correct when prior inserts exist on the same connection.
 
-- [ ] **Enable foreign key enforcement** — `db/manager.py:33` opens SQLite connections without `PRAGMA foreign_keys = ON`, so all FK constraints (cascading deletes, referential integrity) are silently unenforced.
+- [x] **Enable foreign key enforcement** — `db/manager.py:33` opens SQLite connections without `PRAGMA foreign_keys = ON`, so all FK constraints (cascading deletes, referential integrity) are silently unenforced.
+  - **Plan**: Add `PRAGMA foreign_keys = ON` to `DatabaseManager.connect()` and to the `test_db` fixture. Note: `transactions.account_id` has no CASCADE, so deleting an account with transactions will now correctly raise an error.
 
 ## Small changes
 

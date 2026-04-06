@@ -17,6 +17,7 @@ def test_db():
         sqlite3.Connection: Connection to in-memory database.
     """
     conn = sqlite3.connect(":memory:")
+    conn.execute("PRAGMA foreign_keys = ON")
     yield conn
     conn.close()
 
