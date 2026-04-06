@@ -23,10 +23,7 @@ Issues identified during code review, ordered by estimated effort (least to most
 
 - [ ] **Document or handle checksum collisions** — Transaction IDs are `sha256(csv_row)`. Two genuinely different transactions with identical CSV rows will silently collide. At minimum document the trade-off; ideally detect and warn.
 
-- [ ] **Store amounts as integers (cents) instead of REAL** — Migration `003` uses `REAL` for amounts and the service converts `Decimal → float → Decimal`, which can introduce rounding errors. Storing as integer cents preserves precision end-to-end.
 
 ## Larger efforts
-
-- [ ] **Add input validation at ingestion boundary** — Ingestion modules trust CSV data with no validation of amounts, dates, or description lengths. Malformed CSVs produce confusing errors deep in the stack instead of clear parse-time messages.
 
 - [ ] **Add test coverage for cli/, llm/, categorization.py, config.py** — These modules have zero test coverage and are excluded from CI coverage reporting. The CLI commands, LLM provider, prompt loader, and config loading are all untested.
