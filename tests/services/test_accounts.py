@@ -14,7 +14,7 @@ class TestAccountService:
         assert account.id is not None
         assert account.id > 0
         assert account.name == "bofa_checking"
-        assert account.type == "bofa"
+        assert account.account_type == "bofa"
         assert account.description == "Bank of America Checking"
 
     def test_find_account_by_id(self, services):
@@ -28,7 +28,7 @@ class TestAccountService:
         assert found is not None
         assert found.id == created.id
         assert found.name == "chase_card"
-        assert found.type == "chase"
+        assert found.account_type == "chase"
         assert found.description == "Chase Sapphire Card"
 
     def test_find_account_by_id_not_found(self, services):
@@ -47,7 +47,7 @@ class TestAccountService:
 
         assert found is not None
         assert found.name == "amex_card"
-        assert found.type == "amex"
+        assert found.account_type == "amex"
         assert found.description == "American Express Card"
 
     def test_find_by_name_not_found(self, services):
@@ -163,7 +163,7 @@ class TestAccountService:
         assert account_dict == {
             "id": account.id,
             "name": "test",
-            "type": "bofa",
+            "account_type": "bofa",
             "description": "Test Account",
         }
 
@@ -199,5 +199,5 @@ class TestAccountService:
         assert len(accounts) == 4
 
         # Verify all types are preserved
-        types = {acc.type for acc in accounts}
+        types = {acc.account_type for acc in accounts}
         assert types == {"bofa", "chase", "amex", "discover"}

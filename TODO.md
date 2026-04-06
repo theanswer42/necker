@@ -21,6 +21,9 @@ Issues identified during code review, ordered by estimated effort (least to most
 - [x] **Rename `type` field on Transaction** — `models/transaction.py:18` shadows Python's builtin `type()`. Rename to `transaction_type` or similar across the codebase.
   - **Plan**: Rename field and `create_with_checksum` param from `type` to `transaction_type`. DB column is already named `transaction_type` — no migration needed. Update all call sites across ingestion, services, tools, llm, cli, and tests. `Account.type` is unrelated and unchanged.
 
+- [x] **Rename `type` field on Account** — `models/account.py:8` also shadows Python's builtin `type()`. Rename to `account_type`.
+  - **Plan**: Add migration `009` to rename the DB column, rename field in model and `to_dict()`, update services, cli, and tests.
+
 ## Moderate refactors
 
 - [ ] **Fix N+1 queries in `cmd_update_from_csv`** — `cli/transactions.py:416` does a `find()` per CSV row, then updates each transaction individually at line 545. Should batch-fetch transactions and group updates by field set.

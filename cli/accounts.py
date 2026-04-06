@@ -20,7 +20,7 @@ def cmd_list(args, services):
     for account in accounts:
         logger.info(f"ID: {account.id}")
         logger.info(f"Name: {account.name}")
-        logger.info(f"Type: {account.type}")
+        logger.info(f"Type: {account.account_type}")
         logger.info(f"Description: {account.description}")
         logger.info("-" * 80)
 
@@ -62,7 +62,7 @@ def cmd_create(args, services):
 
         logger.info(f"\n✓ Account created successfully with ID: {account.id}")
         logger.info(f"  Name: {account.name}")
-        logger.info(f"  Type: {account.type}")
+        logger.info(f"  Type: {account.account_type}")
         logger.info(f"  Description: {account.description}")
 
     except Exception as e:
