@@ -15,7 +15,8 @@ Issues identified during code review, ordered by estimated effort (least to most
 
 ## Small changes
 
-- [ ] **Remove dead `to_dict()` method** — `models/transaction.py:60` is unused (services build tuples directly), includes a stale `raw_data` field, and is missing newer fields like amortization and merchant name.
+- [x] **Remove dead `to_dict()` method** — `models/transaction.py:60` is unused (services build tuples directly), includes a stale `raw_data` field, and is missing newer fields like amortization and merchant name.
+  - **Plan**: Delete the method. No callers exist. No new tests needed; existing suite confirms nothing breaks.
 
 - [ ] **Rename `type` field on Transaction** — `models/transaction.py:18` shadows Python's builtin `type()`. Rename to `transaction_type` or similar across the codebase.
 
