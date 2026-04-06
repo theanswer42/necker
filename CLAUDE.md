@@ -53,6 +53,15 @@ uv sync --group dev
   database
 - `tools/` contains higher level tools that make use of the services
 
+## Pre-commit Checks
+
+**IMPORTANT**: Before creating ANY git commit, you MUST run the following and ensure they pass:
+```bash
+uv run ruff format .
+uv run ruff check .
+```
+If `ruff check` reports errors, fix them before committing. Do not skip this step.
+
 ## Important Notes
 
 - The `samples/` directory contains sample data files that should only be examined when specifically needed for development tasks
