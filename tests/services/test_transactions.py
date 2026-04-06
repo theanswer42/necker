@@ -1,5 +1,8 @@
+import sqlite3
 from datetime import date, timedelta
 from decimal import Decimal
+
+import pytest
 
 from models.transaction import Transaction
 
@@ -130,6 +133,26 @@ class TestTransactionService:
 
         # Should be exactly 2, not 7 (2 + 5 prior)
         assert count == 2
+
+    def test_create_transaction_with_invalid_account_raises_fk_error(self, services):
+        """FK enforcement: creating a transaction with a non-existent account_id raises IntegrityError."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        transaction = Transaction.create_with_checksum(
+            raw_data="01/15/2025,STARBUCKS,-5.75,1000.00",
+            account_id=99999,  # does not exist
+            transaction_date=date(2025, 1, 15),
+            post_date=None,
+            description="STARBUCKS",
+            bank_category=None,
+            amount=Decimal("5.75"),
+            type="expense",
+        )
+        transaction.data_import_id = data_import.id
+
+        with pytest.raises(sqlite3.IntegrityError):
+            services.transactions.create(transaction)
 
     def test_find_transaction_by_id(self, services):
         """Test finding a transaction by ID."""
