@@ -1,7 +1,6 @@
 import io
 import pytest
 from datetime import date
-from decimal import Decimal
 
 from ingestion.bofa import row_to_transaction, ingest
 
@@ -20,7 +19,7 @@ class TestRowToTransaction:
         assert transaction.transaction_date == date(2025, 1, 15)
         assert transaction.post_date is None
         assert transaction.description == "STARBUCKS #12345"
-        assert transaction.amount == Decimal("5.75")
+        assert transaction.amount == 575
         assert transaction.transaction_type == "expense"
         assert transaction.bank_category is None
         assert transaction.additional_metadata == {"running_balance": "1,234.56"}
@@ -34,7 +33,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("3500.00")
+        assert transaction.amount == 350000
         assert transaction.transaction_type == "income"
         assert transaction.description == "SALARY DEPOSIT"
 
@@ -45,7 +44,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("1234.56")
+        assert transaction.amount == 123456
         assert transaction.transaction_type == "expense"
 
     def test_parse_amount_with_quotes(self):
@@ -56,7 +55,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.description == "QUOTED DESCRIPTION"
-        assert transaction.amount == Decimal("100.00")
+        assert transaction.amount == 10000
 
     def test_detect_discover_credit_card_transfer(self):
         """Test detection of Discover credit card payment as transfer."""
@@ -71,7 +70,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.transaction_type == "transfer"
-        assert transaction.amount == Decimal("150.00")
+        assert transaction.amount == 15000
 
     def test_detect_chase_credit_card_transfer(self):
         """Test detection of Chase credit card payment as transfer."""
@@ -104,7 +103,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.transaction_type == "transfer"
-        assert transaction.amount == Decimal("400.00")
+        assert transaction.amount == 40000
 
     def test_missing_date_raises_error(self):
         """Test that missing date field raises ValueError."""
@@ -302,6 +301,6 @@ Date,Description,Amount,Running Bal.
         transactions = ingest(source, account_id)
 
         assert len(transactions) == 3
-        assert transactions[0].amount == Decimal("5.00")
-        assert transactions[1].amount == Decimal("1234.56")
-        assert transactions[2].amount == Decimal("10000.00")
+        assert transactions[0].amount == 500
+        assert transactions[1].amount == 123456
+        assert transactions[2].amount == 1000000

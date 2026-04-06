@@ -41,9 +41,9 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
     transaction_date = datetime.strptime(trans_date_str, "%m/%d/%Y").date()
     post_date = datetime.strptime(post_date_str, "%m/%d/%Y").date()
 
-    # Parse amount and determine type
+    # Parse amount and convert to integer cents
     amount_value = Decimal(amount_str.replace(",", ""))
-    amount = abs(amount_value)
+    amount = int(abs(amount_value) * 100)
 
     # Check for credit card payment transfers
     if category == "Payments and Credits" and description.startswith(

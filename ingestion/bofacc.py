@@ -40,9 +40,9 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
     # Parse date
     transaction_date = datetime.strptime(posted_date_str, "%m/%d/%Y").date()
 
-    # Parse amount
+    # Parse amount and convert to integer cents
     amount_value = Decimal(amount_str.replace(",", ""))
-    amount = abs(amount_value)
+    amount = int(abs(amount_value) * 100)
 
     # Create additional metadata
     additional_metadata = {

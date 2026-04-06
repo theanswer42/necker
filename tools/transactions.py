@@ -1,7 +1,6 @@
 """Transaction analysis tools."""
 
 from datetime import date
-from decimal import Decimal
 from typing import Dict, List, Optional
 from models.transaction import Transaction
 
@@ -104,20 +103,20 @@ def get_period_summary(
         month keys (format: "YYYY/MM") mapped to summary dictionaries:
         - "income_total": Total income for the month (Decimal)
         - "expense_total": Total expenses for the month (Decimal)
-        - "net": Net amount (income - expenses) (Decimal)
-        - "expenses_by_category": Dict mapping category_id to expense amount (Decimal)
+        - "net": Net amount (income - expenses) in cents (int)
+        - "expenses_by_category": Dict mapping category_id to expense amount in cents (int)
           (category_id=0 for uncategorized transactions)
 
     Example:
         {
             "cash_basis": {
                 "2024/01": {
-                    "income_total": Decimal("1000.00"),
-                    "expense_total": Decimal("500.00"),
-                    "net": Decimal("500.00"),
+                    "income_total": 100000,
+                    "expense_total": 50000,
+                    "net": 50000,
                     "expenses_by_category": {
-                        1: Decimal("200.00"),  # Food category
-                        2: Decimal("300.00"),  # Transportation category
+                        1: 20000,  # Food category
+                        2: 30000,  # Transportation category
                     }
                 },
                 "2024/02": {...},
@@ -142,9 +141,9 @@ def get_period_summary(
     for basis_type in ["cash_basis", "accrual_basis"]:
         # Process each month
         for month_key, transactions in transactions_data[basis_type].items():
-            income_total = Decimal("0")
-            expense_total = Decimal("0")
-            expenses_by_category: Dict[int, Decimal] = {}
+            income_total = 0
+            expense_total = 0
+            expenses_by_category: Dict[int, int] = {}
 
             # Aggregate transactions
             for transaction in transactions:
@@ -161,7 +160,7 @@ def get_period_summary(
                     )
 
                     if category_id not in expenses_by_category:
-                        expenses_by_category[category_id] = Decimal("0")
+                        expenses_by_category[category_id] = 0
                     expenses_by_category[category_id] += transaction.amount
 
             # Calculate net

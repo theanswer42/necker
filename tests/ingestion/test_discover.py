@@ -1,7 +1,6 @@
 import io
 import pytest
 from datetime import date
-from decimal import Decimal
 
 from ingestion.discover import row_to_transaction, ingest
 
@@ -26,7 +25,7 @@ class TestRowToTransaction:
         assert transaction.transaction_date == date(2025, 1, 15)
         assert transaction.post_date == date(2025, 1, 16)
         assert transaction.description == "AMAZON.COM"
-        assert transaction.amount == Decimal("45.99")
+        assert transaction.amount == 4599
         assert transaction.transaction_type == "expense"
         assert transaction.bank_category == "Shopping"
         assert isinstance(transaction.id, str)
@@ -45,7 +44,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("500.00")
+        assert transaction.amount == 50000
         assert transaction.transaction_type == "income"
         assert transaction.bank_category == "Payments and Credits"
 
@@ -62,7 +61,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("1250.00")
+        assert transaction.amount == 125000
         assert transaction.transaction_type == "transfer"
         assert transaction.description == "DIRECTPAY FULL BALANCE"
 
@@ -79,7 +78,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("1234.56")
+        assert transaction.amount == 123456
         assert transaction.transaction_type == "expense"
 
     def test_parse_with_quotes(self):
@@ -280,9 +279,9 @@ class TestIngest:
         transactions = ingest(source, account_id)
 
         assert len(transactions) == 3
-        assert transactions[0].amount == Decimal("5.00")
-        assert transactions[1].amount == Decimal("1234.56")
-        assert transactions[2].amount == Decimal("10000.00")
+        assert transactions[0].amount == 500
+        assert transactions[1].amount == 123456
+        assert transactions[2].amount == 1000000
 
     def test_ingest_with_various_categories(self):
         """Test that different categories are properly captured."""

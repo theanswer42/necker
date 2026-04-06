@@ -1,7 +1,6 @@
 """Tests for transaction analysis tools."""
 
 from datetime import date
-from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 from models.transaction import Transaction
@@ -25,7 +24,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Coffee",
             bank_category=None,
-            amount=Decimal("5.00"),
+            amount=500,
             transaction_type="expense",
         )
         t1.data_import_id = data_import.id
@@ -40,7 +39,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Annual Subscription",
             bank_category=None,
-            amount=Decimal("120.00"),
+            amount=12000,
             transaction_type="expense",
         )
         t2.data_import_id = data_import.id
@@ -70,7 +69,7 @@ class TestGetPeriodTransactions:
         accrual_basis = result["accrual_basis"]["2024/01"]
         assert len(accrual_basis) == 1
         assert accrual_basis[0].description == "Annual Subscription"
-        assert accrual_basis[0].amount == Decimal("10.00")
+        assert accrual_basis[0].amount == 1000
         assert accrual_basis[0].accrued is True
 
     def test_multi_month_period(self, services):
@@ -87,7 +86,7 @@ class TestGetPeriodTransactions:
                 post_date=None,
                 description=f"Transaction {month}",
                 bank_category=None,
-                amount=Decimal("10.00"),
+                amount=1000,
                 transaction_type="expense",
             )
             t.data_import_id = data_import.id
@@ -125,7 +124,7 @@ class TestGetPeriodTransactions:
                 post_date=None,
                 description=f"Transaction {txn_date.month}",
                 bank_category=None,
-                amount=Decimal("10.00"),
+                amount=1000,
                 transaction_type="expense",
             )
             t.data_import_id = data_import.id
@@ -158,7 +157,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Coffee",
             bank_category=None,
-            amount=Decimal("5.00"),
+            amount=500,
             transaction_type="expense",
         )
         t1.data_import_id = data_import.id
@@ -173,7 +172,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Bus",
             bank_category=None,
-            amount=Decimal("2.00"),
+            amount=200,
             transaction_type="expense",
         )
         t2.data_import_id = data_import.id
@@ -188,7 +187,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Food Subscription",
             bank_category=None,
-            amount=Decimal("120.00"),
+            amount=12000,
             transaction_type="expense",
         )
         t3.data_import_id = data_import.id
@@ -227,7 +226,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Coffee",
             bank_category=None,
-            amount=Decimal("5.00"),
+            amount=500,
             transaction_type="expense",
         )
         t.data_import_id = data_import.id
@@ -267,7 +266,7 @@ class TestGetPeriodTransactions:
             post_date=None,
             description="Quarterly Subscription",
             bank_category=None,
-            amount=Decimal("300.00"),
+            amount=30000,
             transaction_type="expense",
         )
         t.data_import_id = data_import.id
@@ -284,13 +283,13 @@ class TestGetPeriodTransactions:
 
         # Accrual should appear in Jan, Feb, Mar but not Apr
         assert len(result["accrual_basis"]["2024/01"]) == 1
-        assert result["accrual_basis"]["2024/01"][0].amount == Decimal("100.00")
+        assert result["accrual_basis"]["2024/01"][0].amount == 10000
 
         assert len(result["accrual_basis"]["2024/02"]) == 1
-        assert result["accrual_basis"]["2024/02"][0].amount == Decimal("100.00")
+        assert result["accrual_basis"]["2024/02"][0].amount == 10000
 
         assert len(result["accrual_basis"]["2024/03"]) == 1
-        assert result["accrual_basis"]["2024/03"][0].amount == Decimal("100.00")
+        assert result["accrual_basis"]["2024/03"][0].amount == 10000
 
         assert len(result["accrual_basis"]["2024/04"]) == 0
 
@@ -313,7 +312,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Salary",
             bank_category=None,
-            amount=Decimal("2000.00"),
+            amount=200000,
             transaction_type="income",
         )
         t1.data_import_id = data_import.id
@@ -327,7 +326,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Groceries",
             bank_category=None,
-            amount=Decimal("150.00"),
+            amount=15000,
             transaction_type="expense",
         )
         t2.data_import_id = data_import.id
@@ -341,7 +340,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Gas",
             bank_category=None,
-            amount=Decimal("50.00"),
+            amount=5000,
             transaction_type="expense",
         )
         t3.data_import_id = data_import.id
@@ -357,11 +356,11 @@ class TestGetPeriodSummary:
 
         # Check cash basis summary
         summary = result["cash_basis"]["2024/01"]
-        assert summary["income_total"] == Decimal("2000.00")
-        assert summary["expense_total"] == Decimal("200.00")
-        assert summary["net"] == Decimal("1800.00")
-        assert summary["expenses_by_category"][category1.id] == Decimal("150.00")
-        assert summary["expenses_by_category"][category2.id] == Decimal("50.00")
+        assert summary["income_total"] == 200000
+        assert summary["expense_total"] == 20000
+        assert summary["net"] == 180000
+        assert summary["expenses_by_category"][category1.id] == 15000
+        assert summary["expenses_by_category"][category2.id] == 5000
 
     def test_uncategorized_expenses(self, services):
         """Test that uncategorized expenses use category_id=0."""
@@ -376,7 +375,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Mystery expense",
             bank_category=None,
-            amount=Decimal("100.00"),
+            amount=10000,
             transaction_type="expense",
         )
         t.data_import_id = data_import.id
@@ -390,8 +389,8 @@ class TestGetPeriodSummary:
         )
 
         summary = result["cash_basis"]["2024/01"]
-        assert summary["expense_total"] == Decimal("100.00")
-        assert summary["expenses_by_category"][0] == Decimal("100.00")
+        assert summary["expense_total"] == 10000
+        assert summary["expenses_by_category"][0] == 10000
 
     def test_multiple_expenses_same_category(self, services):
         """Test that multiple expenses in the same category are summed."""
@@ -408,7 +407,7 @@ class TestGetPeriodSummary:
                 post_date=None,
                 description=f"Food {i}",
                 bank_category=None,
-                amount=Decimal("50.00"),
+                amount=5000,
                 transaction_type="expense",
             )
             t.data_import_id = data_import.id
@@ -422,8 +421,8 @@ class TestGetPeriodSummary:
         )
 
         summary = result["cash_basis"]["2024/01"]
-        assert summary["expense_total"] == Decimal("150.00")
-        assert summary["expenses_by_category"][category.id] == Decimal("150.00")
+        assert summary["expense_total"] == 15000
+        assert summary["expenses_by_category"][category.id] == 15000
 
     def test_accrual_basis_summary(self, services):
         """Test summary for accrual basis with amortized transactions."""
@@ -439,7 +438,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Annual Subscription",
             bank_category=None,
-            amount=Decimal("120.00"),
+            amount=12000,
             transaction_type="expense",
         )
         t.data_import_id = data_import.id
@@ -456,13 +455,13 @@ class TestGetPeriodSummary:
 
         # Cash basis should be empty (transaction is amortized)
         cash_summary = result["cash_basis"]["2024/01"]
-        assert cash_summary["expense_total"] == Decimal("0")
+        assert cash_summary["expense_total"] == 0
         assert len(cash_summary["expenses_by_category"]) == 0
 
         # Accrual basis should show monthly amount
         accrual_summary = result["accrual_basis"]["2024/01"]
-        assert accrual_summary["expense_total"] == Decimal("10.00")
-        assert accrual_summary["expenses_by_category"][category.id] == Decimal("10.00")
+        assert accrual_summary["expense_total"] == 1000
+        assert accrual_summary["expenses_by_category"][category.id] == 1000
 
     def test_empty_month_summary(self, services):
         """Test that empty months have zero values."""
@@ -477,7 +476,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Coffee",
             bank_category=None,
-            amount=Decimal("5.00"),
+            amount=500,
             transaction_type="expense",
         )
         t.data_import_id = data_import.id
@@ -492,19 +491,19 @@ class TestGetPeriodSummary:
 
         # January has data
         jan_summary = result["cash_basis"]["2024/01"]
-        assert jan_summary["expense_total"] == Decimal("5.00")
+        assert jan_summary["expense_total"] == 500
 
         # February and March are empty
         feb_summary = result["cash_basis"]["2024/02"]
-        assert feb_summary["income_total"] == Decimal("0")
-        assert feb_summary["expense_total"] == Decimal("0")
-        assert feb_summary["net"] == Decimal("0")
+        assert feb_summary["income_total"] == 0
+        assert feb_summary["expense_total"] == 0
+        assert feb_summary["net"] == 0
         assert len(feb_summary["expenses_by_category"]) == 0
 
         mar_summary = result["cash_basis"]["2024/03"]
-        assert mar_summary["income_total"] == Decimal("0")
-        assert mar_summary["expense_total"] == Decimal("0")
-        assert mar_summary["net"] == Decimal("0")
+        assert mar_summary["income_total"] == 0
+        assert mar_summary["expense_total"] == 0
+        assert mar_summary["net"] == 0
         assert len(mar_summary["expenses_by_category"]) == 0
 
     def test_category_filter(self, services):
@@ -522,7 +521,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Food",
             bank_category=None,
-            amount=Decimal("100.00"),
+            amount=10000,
             transaction_type="expense",
         )
         t1.data_import_id = data_import.id
@@ -536,7 +535,7 @@ class TestGetPeriodSummary:
             post_date=None,
             description="Gas",
             bank_category=None,
-            amount=Decimal("50.00"),
+            amount=5000,
             transaction_type="expense",
         )
         t2.data_import_id = data_import.id
@@ -553,8 +552,8 @@ class TestGetPeriodSummary:
 
         summary = result["cash_basis"]["2024/01"]
         # Should only include food expense
-        assert summary["expense_total"] == Decimal("100.00")
-        assert summary["expenses_by_category"][category1.id] == Decimal("100.00")
+        assert summary["expense_total"] == 10000
+        assert summary["expenses_by_category"][category1.id] == 10000
         assert category2.id not in summary["expenses_by_category"]
 
     def test_multi_month_summary(self, services):
@@ -572,7 +571,7 @@ class TestGetPeriodSummary:
                 post_date=None,
                 description=f"Food {month}",
                 bank_category=None,
-                amount=Decimal(f"{month * 100}.00"),
+                amount=month * 10000,
                 transaction_type="expense",
             )
             t.data_import_id = data_import.id
@@ -586,6 +585,6 @@ class TestGetPeriodSummary:
         )
 
         # Check each month
-        assert result["cash_basis"]["2024/01"]["expense_total"] == Decimal("100.00")
-        assert result["cash_basis"]["2024/02"]["expense_total"] == Decimal("200.00")
-        assert result["cash_basis"]["2024/03"]["expense_total"] == Decimal("300.00")
+        assert result["cash_basis"]["2024/01"]["expense_total"] == 10000
+        assert result["cash_basis"]["2024/02"]["expense_total"] == 20000
+        assert result["cash_basis"]["2024/03"]["expense_total"] == 30000
