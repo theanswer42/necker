@@ -134,6 +134,44 @@ class TestTransactionService:
         # Should be exactly 2, not 7 (2 + 5 prior)
         assert count == 2
 
+    def test_bulk_create_within_batch_collision_warns_and_drops(self, services, caplog):
+        """Within-batch collision: duplicate IDs in the same batch trigger a warning
+        and only the first entry is inserted."""
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        # Two transactions with identical raw_data produce the same checksum ID.
+        def make_collision(description):
+            t = Transaction.create_with_checksum(
+                raw_data="01/15/2025,COFFEE SHOP,-4.50,1000.00",
+                account_id=account.id,
+                transaction_date=date(2025, 1, 15),
+                post_date=None,
+                description=description,
+                bank_category=None,
+                amount=Decimal("4.50"),
+                transaction_type="expense",
+            )
+            t.data_import_id = data_import.id
+            return t
+
+        first = make_collision("COFFEE SHOP")
+        second = make_collision("COFFEE SHOP")
+        assert first.id == second.id  # confirm they actually collide
+
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="services.transactions"):
+            count = services.transactions.bulk_create([first, second])
+
+        # Only the first entry should be inserted
+        assert count == 1
+        found = services.transactions.find_by_account(account.id)
+        assert len(found) == 1
+
+        # A warning should have been logged
+        assert any("collision" in record.message.lower() for record in caplog.records)
+
     def test_create_transaction_with_invalid_account_raises_fk_error(self, services):
         """FK enforcement: creating a transaction with a non-existent account_id raises IntegrityError."""
         account = services.accounts.create("test_account", "bofa", "Test Account")

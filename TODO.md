@@ -28,7 +28,8 @@ Issues identified during code review, ordered by estimated effort (least to most
 
 - [ ] **Fix N+1 queries in `cmd_update_from_csv`** — `cli/transactions.py:416` does a `find()` per CSV row, then updates each transaction individually at line 545. Should batch-fetch transactions and group updates by field set.
 
-- [ ] **Document or handle checksum collisions** — Transaction IDs are `sha256(csv_row)`. Two genuinely different transactions with identical CSV rows will silently collide. At minimum document the trade-off; ideally detect and warn.
+- [x] **Document or handle checksum collisions** — Transaction IDs are `sha256(csv_row)`. Two genuinely different transactions with identical CSV rows will silently collide. At minimum document the trade-off; ideally detect and warn.
+  - **Plan**: Detect within-batch ID collisions in `bulk_create` before inserting and log a `WARNING`. Document the deduplication trade-off in `create_with_checksum`. The return value (rows inserted < input length) already signals skipped rows to callers.
 
 
 ## Larger efforts
