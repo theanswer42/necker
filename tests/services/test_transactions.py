@@ -61,7 +61,7 @@ class TestTransactionService:
 
         count = services.transactions.bulk_create(transactions)
 
-        assert count >= 3  # total_changes is cumulative, so at least 3
+        assert count == 3
 
         # Verify they were created
         found_transactions = services.transactions.find_by_account(account.id)
@@ -91,11 +91,45 @@ class TestTransactionService:
         before_count = len(services.transactions.find_by_account(account.id))
 
         # Try to bulk create with same transaction
-        services.transactions.bulk_create([transaction])
+        count = services.transactions.bulk_create([transaction])
 
         # Should skip the duplicate (INSERT OR IGNORE)
         after_count = len(services.transactions.find_by_account(account.id))
         assert after_count == before_count  # No new transactions added
+        assert count == 0  # rowcount reflects only this executemany, not prior inserts
+
+    def test_bulk_create_count_unaffected_by_prior_inserts(self, services):
+        """Regression test: bulk_create count should reflect only the current batch.
+
+        conn.total_changes counts all changes on the connection, so prior inserts
+        would inflate the returned count. cursor.rowcount is scoped to the last statement.
+        """
+        account = services.accounts.create("test_account", "bofa", "Test Account")
+        data_import = services.data_imports.create(account.id, "test.csv.gz")
+
+        def make_transaction(i):
+            t = Transaction.create_with_checksum(
+                raw_data=f"01/15/2025,TX{i},-{i}.00,1000.00",
+                account_id=account.id,
+                transaction_date=date(2025, 1, 15),
+                post_date=None,
+                description=f"TX{i}",
+                bank_category=None,
+                amount=Decimal(f"{i}.00"),
+                type="expense",
+            )
+            t.data_import_id = data_import.id
+            return t
+
+        # Pre-insert 5 transactions to dirty conn.total_changes
+        services.transactions.bulk_create([make_transaction(i) for i in range(1, 6)])
+
+        # Now insert only 2 new transactions
+        new_transactions = [make_transaction(i) for i in range(6, 8)]
+        count = services.transactions.bulk_create(new_transactions)
+
+        # Should be exactly 2, not 7 (2 + 5 prior)
+        assert count == 2
 
     def test_find_transaction_by_id(self, services):
         """Test finding a transaction by ID."""

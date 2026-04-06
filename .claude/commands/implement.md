@@ -47,10 +47,10 @@ If the plan changes during implementation (e.g., you discover something unexpect
 
 ## Step 4: Create a branch
 
-Create a new branch from `main`:
-- From TODO: `feat/<short-kebab-description>` (e.g., `feat/add-pydantic-deps`)
-- From GitHub issue: `feat/<issue-number>-<short-kebab-description>` (e.g., `feat/42-add-retry-logic`)
-- From free text: `feat/<short-kebab-description>`
+Create a new branch from `main`. Use `fix/` prefix for bug fixes and `feat/` for new functionality:
+- From TODO: `fix/<short-kebab-description>` or `feat/<short-kebab-description>` (e.g., `fix/bulk-create-rowcount`, `feat/add-pydantic-deps`)
+- From GitHub issue: `fix/<issue-number>-<short-kebab-description>` or `feat/<issue-number>-<short-kebab-description>`
+- From free text: same convention
 
 ```bash
 git checkout main && git pull && git checkout -b <branch-name>

@@ -127,7 +127,7 @@ class TransactionService:
             ]
 
             # Execute bulk insert
-            conn.executemany(
+            cursor = conn.executemany(
                 f"""
                 INSERT OR IGNORE INTO transactions ({_TRANSACTION_INSERT_FIELDS})
                 VALUES {_TRANSACTION_INSERT_PLACEHOLDERS}
@@ -137,7 +137,7 @@ class TransactionService:
             conn.commit()
 
             # Return count of inserted rows
-            return conn.total_changes
+            return cursor.rowcount
 
     def batch_update(
         self, transactions: List[Transaction], field_names: List[str]
