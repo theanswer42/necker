@@ -325,7 +325,7 @@ def cmd_export(args, services):
                         ),
                         t.merchant_name or "",
                         t.auto_merchant_name or "",
-                        float(t.amount),
+                        t.amount / 100,
                         t.transaction_type,
                         t.data_import_id,
                         t.amortize_months or "",
@@ -602,12 +602,12 @@ def cmd_set_amortization(args, services):
 
         logger.info("✓ Transaction amortization set successfully")
         logger.info(f"  Transaction: {transaction.description[:50]}...")
-        logger.info(f"  Amount: ${transaction.amount}")
+        logger.info(f"  Amount: ${transaction.amount / 100:.2f}")
         logger.info(f"  Amortize months: {months}")
         logger.info(
             f"  Amortization period: {transaction.transaction_date.isoformat()} to {amortize_end_date.isoformat()}"
         )
-        logger.info(f"  Monthly amount: ${float(transaction.amount) / months:.2f}")
+        logger.info(f"  Monthly amount: ${transaction.amount / months / 100:.2f}")
 
     except Exception as e:
         logger.error(f"Error updating transaction: {e}")

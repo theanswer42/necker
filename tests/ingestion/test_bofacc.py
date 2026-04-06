@@ -1,7 +1,6 @@
 import io
 import pytest
 from datetime import date
-from decimal import Decimal
 
 from ingestion.bofacc import row_to_transaction, ingest
 
@@ -26,7 +25,7 @@ class TestRowToTransaction:
         assert transaction.transaction_date == date(2025, 2, 14)
         assert transaction.post_date is None
         assert transaction.description == "WHOLEFDS HAR 10221 OAKLAND CA"
-        assert transaction.amount == Decimal("30.29")
+        assert transaction.amount == 3029
         assert transaction.transaction_type == "expense"
         assert transaction.bank_category is None
         assert transaction.additional_metadata == {
@@ -49,7 +48,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("60.00")
+        assert transaction.amount == 6000
         assert transaction.transaction_type == "transfer"
         assert transaction.description == "PAYMENT - THANK YOU"
 
@@ -66,7 +65,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("1290.47")
+        assert transaction.amount == 129047
         assert transaction.transaction_type == "expense"
 
     def test_parse_with_quotes(self):
@@ -101,7 +100,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("0.88")
+        assert transaction.amount == 88
         assert transaction.transaction_type == "expense"
 
     def test_parse_large_expense(self):
@@ -117,7 +116,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("2500.99")
+        assert transaction.amount == 250099
         assert transaction.transaction_type == "expense"
 
     def test_empty_address_field(self):
@@ -248,13 +247,13 @@ class TestIngest:
         assert len(transactions) == 3
         assert transactions[0].description == "WHOLEFDS HAR 10221 OAKLAND CA"
         assert transactions[0].transaction_type == "expense"
-        assert transactions[0].amount == Decimal("30.29")
+        assert transactions[0].amount == 3029
         assert transactions[1].description == "PAYMENT - THANK YOU"
         assert transactions[1].transaction_type == "transfer"
-        assert transactions[1].amount == Decimal("60.00")
+        assert transactions[1].amount == 6000
         assert transactions[2].description == "NEWEGG MARKETPLACE 800-390-1119 CA"
         assert transactions[2].transaction_type == "expense"
-        assert transactions[2].amount == Decimal("1290.47")
+        assert transactions[2].amount == 129047
 
     def test_ingest_skips_malformed_rows(self):
         """Test that malformed rows are skipped gracefully."""
@@ -347,9 +346,9 @@ class TestIngest:
         transactions = ingest(source, account_id)
 
         assert len(transactions) == 3
-        assert transactions[0].amount == Decimal("5.00")
-        assert transactions[1].amount == Decimal("1234.56")
-        assert transactions[2].amount == Decimal("10000.00")
+        assert transactions[0].amount == 500
+        assert transactions[1].amount == 123456
+        assert transactions[2].amount == 1000000
 
     def test_ingest_mixed_transaction_types(self):
         """Test that expenses and payments are correctly identified."""
@@ -407,11 +406,11 @@ class TestIngest:
         # Check first transaction
         assert transactions[0].transaction_date == date(2025, 2, 14)
         assert transactions[0].description == "WHOLEFDS HAR 10221 OAKLAND CA"
-        assert transactions[0].amount == Decimal("30.29")
+        assert transactions[0].amount == 3029
         assert transactions[0].transaction_type == "expense"
         # Check payment transaction
         assert transactions[4].description == "PAYMENT - THANK YOU"
-        assert transactions[4].amount == Decimal("60.00")
+        assert transactions[4].amount == 6000
         assert transactions[4].transaction_type == "transfer"
         # Check small amount transaction
-        assert transactions[3].amount == Decimal("0.88")
+        assert transactions[3].amount == 88

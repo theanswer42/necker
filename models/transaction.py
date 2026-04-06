@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
 from typing import Optional
 import hashlib
 
@@ -13,7 +12,7 @@ class Transaction:
     post_date: Optional[date]
     description: str
     bank_category: Optional[str]  # category from bank/CSV import
-    amount: Decimal  # always positive
+    amount: int  # always positive, stored in cents (e.g. $5.75 → 575)
     transaction_type: str  # 'income', 'expense', or 'transfer'
     additional_metadata: Optional[dict] = None
     data_import_id: int = (
@@ -38,7 +37,7 @@ class Transaction:
         post_date: Optional[date],
         description: str,
         bank_category: Optional[str],
-        amount: Decimal,
+        amount: int,
         transaction_type: str,
         additional_metadata: Optional[dict] = None,
     ) -> "Transaction":

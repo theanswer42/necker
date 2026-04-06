@@ -4,7 +4,6 @@ import json
 import logging
 from typing import List, Optional
 from datetime import date
-from decimal import Decimal
 from models.transaction import Transaction
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,7 @@ class TransactionService:
                     transaction.auto_category_id,
                     transaction.merchant_name,
                     transaction.auto_merchant_name,
-                    float(transaction.amount),
+                    transaction.amount,
                     transaction.transaction_type,
                     (
                         json.dumps(transaction.additional_metadata)
@@ -148,7 +147,7 @@ class TransactionService:
                     t.auto_category_id,
                     t.merchant_name,
                     t.auto_merchant_name,
-                    float(t.amount),
+                    t.amount,
                     t.transaction_type,
                     json.dumps(t.additional_metadata)
                     if t.additional_metadata
@@ -490,8 +489,8 @@ class TransactionService:
             for row in rows:
                 original = self._row_to_transaction(row)
 
-                # Calculate accrued amount (rounded to 2 decimals)
-                accrued_amount = round(original.amount / original.amortize_months, 2)
+                # Calculate accrued amount in cents, rounded to nearest cent
+                accrued_amount = round(original.amount / original.amortize_months)
 
                 # Create new Transaction with accrued values
                 accrued_txn = Transaction(
@@ -525,7 +524,7 @@ class TransactionService:
             post_date=date.fromisoformat(row[4]) if row[4] else None,
             description=row[5],
             bank_category=row[6],
-            amount=Decimal(str(row[11])),
+            amount=row[11],
             transaction_type=row[12],
             additional_metadata=json.loads(row[13]) if row[13] else None,
             data_import_id=row[2],

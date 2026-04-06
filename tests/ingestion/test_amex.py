@@ -1,7 +1,6 @@
 import io
 import pytest
 from datetime import date
-from decimal import Decimal
 
 from ingestion.amex import row_to_transaction, ingest
 
@@ -32,7 +31,7 @@ class TestRowToTransaction:
         assert transaction.transaction_date == date(2025, 1, 15)
         assert transaction.post_date is None  # AMEX doesn't have post date
         assert transaction.description == "AMAZON.COM"
-        assert transaction.amount == Decimal("45.99")
+        assert transaction.amount == 4599
         assert transaction.transaction_type == "expense"
         assert transaction.bank_category == "Merchandise & Supplies-Internet Purchase"
         assert transaction.additional_metadata["appears_as"] == "AMAZON.COM*RETAIL"
@@ -63,7 +62,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("500.00")
+        assert transaction.amount == 50000
         assert transaction.transaction_type == "income"
         assert transaction.bank_category == "Payments"
         # Empty metadata fields should not be included
@@ -91,7 +90,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("1250.00")
+        assert transaction.amount == 125000
         assert transaction.transaction_type == "transfer"
         assert transaction.description == "AUTOPAY PAYMENT - THANK YOU"
 
@@ -114,7 +113,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.amount == Decimal("1234.56")
+        assert transaction.amount == 123456
         assert transaction.transaction_type == "expense"
 
     def test_parse_with_quotes(self):
@@ -222,7 +221,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.description == "MINIMAL"
-        assert transaction.amount == Decimal("50.00")
+        assert transaction.amount == 5000
         assert transaction.bank_category is None
         assert (
             transaction.additional_metadata is None
@@ -489,9 +488,9 @@ class TestIngest:
         transactions = ingest(source, account_id)
 
         assert len(transactions) == 3
-        assert transactions[0].amount == Decimal("5.00")
-        assert transactions[1].amount == Decimal("1234.56")
-        assert transactions[2].amount == Decimal("10000.00")
+        assert transactions[0].amount == 500
+        assert transactions[1].amount == 123456
+        assert transactions[2].amount == 1000000
 
     def test_ingest_with_various_categories(self):
         """Test that different categories are properly captured."""

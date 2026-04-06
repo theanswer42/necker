@@ -39,12 +39,12 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
     # Parse date
     transaction_date = datetime.strptime(date_str, "%m/%d/%Y").date()
 
-    # Parse amount
+    # Parse amount and convert to integer cents
     if amount_str.startswith("-"):
-        amount = Decimal(amount_str[1:].replace(",", ""))
+        amount = int(Decimal(amount_str[1:].replace(",", "")) * 100)
         is_outgoing = True
     else:
-        amount = Decimal(amount_str.replace(",", ""))
+        amount = int(Decimal(amount_str.replace(",", "")) * 100)
         is_outgoing = False
 
     # Check for credit card payment transfers
