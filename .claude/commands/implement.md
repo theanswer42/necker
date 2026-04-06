@@ -100,19 +100,28 @@ uv run ruff check .
 
 Fix any issues reported by `ruff check` before proceeding.
 
-## Step 8: Commit
+## Step 8: Review documentation
+
+Check that documentation and comments remain accurate after the change:
+- **README.md**: Does it reference files, paths, commands, or patterns that changed?
+- **CLAUDE.md**: Does the project structure section or any instructions need updating?
+- **Code comments**: Do any docstrings, inline comments, or module-level descriptions reference things that moved, were renamed, or no longer exist?
+
+Fix anything that's now stale or misleading. Don't add new documentation — just keep existing docs honest.
+
+## Step 9: Commit
 
 Create a commit with a clear message that references the work item:
 - For TODO items: reference the item title
 - For GitHub issues: include `Fixes #<number>` or `Closes #<number>` in the commit body
 - **Important**: If the change modified `pyproject.toml` (dependency changes), always include `uv.lock` in the commit.
 
-## Step 9: Update the work item
+## Step 10: Update the work item
 
 - **TODO.md**: Check off the item (`- [x]`).
 - **GitHub issue**: The `Fixes #N` in the commit/PR will auto-close it.
 
-## Step 10: Push and create a PR
+## Step 11: Push and create a PR
 
 ```bash
 git push -u origin <branch-name>
