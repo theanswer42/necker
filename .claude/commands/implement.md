@@ -6,6 +6,22 @@ description: Implement a feature or fix from a TODO item, GitHub issue, or free-
 
 You are implementing a well-defined feature or code change. The input is: $ARGUMENTS
 
+## Step 0: Preflight check
+
+Before doing anything else, ensure the working directory is clean and on an up-to-date main:
+
+```bash
+git status --porcelain
+```
+
+If there are any uncommitted changes or untracked files that look like in-progress work, **stop and tell the user** — do not stash or discard anything. Ask them to commit or clean up before proceeding.
+
+If the working directory is clean (or only has untracked files that are clearly not in-progress work, e.g. build artifacts), proceed:
+
+```bash
+git checkout main && git pull
+```
+
 ## Step 1: Identify the work item
 
 Determine the source of the work item:
