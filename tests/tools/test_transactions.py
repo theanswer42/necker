@@ -26,7 +26,7 @@ class TestGetPeriodTransactions:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.category_id = category.id
@@ -41,7 +41,7 @@ class TestGetPeriodTransactions:
             description="Annual Subscription",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category.id
@@ -88,7 +88,7 @@ class TestGetPeriodTransactions:
                 description=f"Transaction {month}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -126,7 +126,7 @@ class TestGetPeriodTransactions:
                 description=f"Transaction {txn_date.month}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -159,7 +159,7 @@ class TestGetPeriodTransactions:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.category_id = category1.id
@@ -174,7 +174,7 @@ class TestGetPeriodTransactions:
             description="Bus",
             bank_category=None,
             amount=Decimal("2.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category2.id
@@ -189,7 +189,7 @@ class TestGetPeriodTransactions:
             description="Food Subscription",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t3.data_import_id = data_import.id
         t3.category_id = category1.id
@@ -228,7 +228,7 @@ class TestGetPeriodTransactions:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t.data_import_id = data_import.id
         services.transactions.create(t)
@@ -268,7 +268,7 @@ class TestGetPeriodTransactions:
             description="Quarterly Subscription",
             bank_category=None,
             amount=Decimal("300.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t.data_import_id = data_import.id
         t.amortize_months = 3
@@ -314,7 +314,7 @@ class TestGetPeriodSummary:
             description="Salary",
             bank_category=None,
             amount=Decimal("2000.00"),
-            type="income",
+            transaction_type="income",
         )
         t1.data_import_id = data_import.id
         services.transactions.create(t1)
@@ -328,7 +328,7 @@ class TestGetPeriodSummary:
             description="Groceries",
             bank_category=None,
             amount=Decimal("150.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category1.id
@@ -342,7 +342,7 @@ class TestGetPeriodSummary:
             description="Gas",
             bank_category=None,
             amount=Decimal("50.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t3.data_import_id = data_import.id
         t3.category_id = category2.id
@@ -377,7 +377,7 @@ class TestGetPeriodSummary:
             description="Mystery expense",
             bank_category=None,
             amount=Decimal("100.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t.data_import_id = data_import.id
         # No category_id set
@@ -409,7 +409,7 @@ class TestGetPeriodSummary:
                 description=f"Food {i}",
                 bank_category=None,
                 amount=Decimal("50.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             t.category_id = category.id
@@ -440,7 +440,7 @@ class TestGetPeriodSummary:
             description="Annual Subscription",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t.data_import_id = data_import.id
         t.category_id = category.id
@@ -478,7 +478,7 @@ class TestGetPeriodSummary:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t.data_import_id = data_import.id
         services.transactions.create(t)
@@ -523,7 +523,7 @@ class TestGetPeriodSummary:
             description="Food",
             bank_category=None,
             amount=Decimal("100.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.category_id = category1.id
@@ -537,7 +537,7 @@ class TestGetPeriodSummary:
             description="Gas",
             bank_category=None,
             amount=Decimal("50.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category2.id
@@ -573,7 +573,7 @@ class TestGetPeriodSummary:
                 description=f"Food {month}",
                 bank_category=None,
                 amount=Decimal(f"{month * 100}.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             t.category_id = category.id

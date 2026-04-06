@@ -148,9 +148,9 @@ def get_period_summary(
 
             # Aggregate transactions
             for transaction in transactions:
-                if transaction.type == "income":
+                if transaction.transaction_type == "income":
                     income_total += transaction.amount
-                elif transaction.type == "expense":
+                elif transaction.transaction_type == "expense":
                     expense_total += transaction.amount
 
                     # Use category_id=0 for uncategorized transactions

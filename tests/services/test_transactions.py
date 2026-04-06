@@ -23,7 +23,7 @@ class TestTransactionService:
             description="STARBUCKS",
             bank_category=None,
             amount=Decimal("5.75"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
 
@@ -54,7 +54,7 @@ class TestTransactionService:
                 description=f"Transaction {i}",
                 bank_category=None,
                 amount=Decimal(str(i)),
-                type="expense",
+                transaction_type="expense",
             )
             for i in range(1, 4)
         ]
@@ -83,7 +83,7 @@ class TestTransactionService:
             description="DUPLICATE",
             bank_category=None,
             amount=Decimal("5.75"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
 
@@ -119,7 +119,7 @@ class TestTransactionService:
                 description=f"TX{i}",
                 bank_category=None,
                 amount=Decimal(f"{i}.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             return t
@@ -147,7 +147,7 @@ class TestTransactionService:
             description="STARBUCKS",
             bank_category=None,
             amount=Decimal("5.75"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
 
@@ -167,7 +167,7 @@ class TestTransactionService:
             description="FIND ME",
             bank_category=None,
             amount=Decimal("10.00"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
         services.transactions.create(transaction)
@@ -198,7 +198,7 @@ class TestTransactionService:
                 description=f"Transaction {i}",
                 bank_category=None,
                 amount=Decimal(str(i)),
-                type="expense",
+                transaction_type="expense",
             )
             for i in range(3)
         ]
@@ -237,7 +237,7 @@ class TestTransactionService:
             description="STORE",
             bank_category=None,
             amount=Decimal("50.00"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
         services.transactions.create(transaction)
@@ -264,7 +264,7 @@ class TestTransactionService:
             description="Fake",
             bank_category=None,
             amount=Decimal("10.00"),
-            type="expense",
+            transaction_type="expense",
         )
         fake_transaction.category_id = category.id
         result = services.transactions.update(fake_transaction, ["category_id"])
@@ -287,7 +287,7 @@ class TestTransactionService:
                 description=f"RESTAURANT{i}",
                 bank_category=None,
                 amount=Decimal("20.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -319,7 +319,7 @@ class TestTransactionService:
                 description=f"AUTO{i}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -348,7 +348,7 @@ class TestTransactionService:
             description="SUBSCRIPTION",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
         services.transactions.create(transaction)
@@ -382,7 +382,7 @@ class TestTransactionService:
                 description=f"SUBSCRIPTION{i}",
                 bank_category=None,
                 amount=Decimal("100.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -417,7 +417,7 @@ class TestTransactionService:
                 description=f"Transaction {i}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -450,7 +450,7 @@ class TestTransactionService:
                 description=f"Transaction for {account.name}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -479,7 +479,7 @@ class TestTransactionService:
                 description=f"Transaction {i}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -514,7 +514,7 @@ class TestTransactionService:
                 description=f"Transaction {i}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             services.transactions.create(t)
@@ -553,7 +553,7 @@ class TestTransactionService:
                 description=f"Transaction {i}",
                 bank_category=None,
                 amount=Decimal("10.00"),
-                type="expense",
+                transaction_type="expense",
             )
             t.data_import_id = data_import.id
             t.category_id = category.id
@@ -584,7 +584,7 @@ class TestTransactionService:
             description="STORE",
             bank_category=None,
             amount=Decimal("50.00"),
-            type="expense",
+            transaction_type="expense",
             additional_metadata=metadata,
         )
         transaction.data_import_id = data_import.id
@@ -607,7 +607,7 @@ class TestTransactionService:
             description="PENDING",
             bank_category="Shopping",
             amount=Decimal("25.00"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
         services.transactions.create(transaction)
@@ -631,7 +631,7 @@ class TestTransactionService:
             description="Annual Subscription",
             bank_category=None,
             amount=Decimal("100.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.amortize_months = 12
@@ -646,7 +646,7 @@ class TestTransactionService:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         services.transactions.create(t2)
@@ -680,7 +680,7 @@ class TestTransactionService:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.category_id = category1.id
@@ -695,7 +695,7 @@ class TestTransactionService:
             description="Bus",
             bank_category=None,
             amount=Decimal("2.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category2.id
@@ -710,7 +710,7 @@ class TestTransactionService:
             description="Other",
             bank_category=None,
             amount=Decimal("3.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t3.data_import_id = data_import.id
         services.transactions.create(t3)
@@ -755,7 +755,7 @@ class TestTransactionService:
             description="Food Subscription",
             bank_category=None,
             amount=Decimal("100.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.category_id = category1.id
@@ -771,7 +771,7 @@ class TestTransactionService:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category1.id
@@ -802,7 +802,7 @@ class TestTransactionService:
             description="Subscription",
             bank_category=None,
             amount=Decimal("100.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.amortize_months = 12
@@ -817,7 +817,7 @@ class TestTransactionService:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         t2.category_id = category1.id
@@ -857,7 +857,7 @@ class TestTransactionService:
             description="Annual Subscription",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.amortize_months = 12
@@ -891,7 +891,7 @@ class TestTransactionService:
             description="Subscription",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.amortize_months = 12
@@ -928,7 +928,7 @@ class TestTransactionService:
             description="Quarterly",
             bank_category=None,
             amount=Decimal("100.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         t1.amortize_months = 3
@@ -960,7 +960,7 @@ class TestTransactionService:
             description="Software",
             bank_category=None,
             amount=Decimal("120.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import1.id
         t1.category_id = category1.id
@@ -977,7 +977,7 @@ class TestTransactionService:
             description="Streaming",
             bank_category=None,
             amount=Decimal("60.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import2.id
         t2.category_id = category2.id
@@ -1023,7 +1023,7 @@ class TestTransactionService:
             description="Coffee",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         services.transactions.create(t1)
@@ -1047,7 +1047,7 @@ class TestTransactionService:
             description="AMAZON.COM*123ABC",
             bank_category=None,
             amount=Decimal("25.00"),
-            type="expense",
+            transaction_type="expense",
         )
         transaction.data_import_id = data_import.id
         transaction.merchant_name = "Amazon"
@@ -1075,7 +1075,7 @@ class TestTransactionService:
             description="AMAZON.COM",
             bank_category=None,
             amount=Decimal("25.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         services.transactions.create(t1)
@@ -1088,7 +1088,7 @@ class TestTransactionService:
             description="STARBUCKS",
             bank_category=None,
             amount=Decimal("5.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t2.data_import_id = data_import.id
         services.transactions.create(t2)
@@ -1121,7 +1121,7 @@ class TestTransactionService:
             description="WAL-MART #123",
             bank_category=None,
             amount=Decimal("50.00"),
-            type="expense",
+            transaction_type="expense",
         )
         t1.data_import_id = data_import.id
         services.transactions.create(t1)

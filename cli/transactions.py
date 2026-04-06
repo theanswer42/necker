@@ -326,7 +326,7 @@ def cmd_export(args, services):
                         t.merchant_name or "",
                         t.auto_merchant_name or "",
                         float(t.amount),
-                        t.type,
+                        t.transaction_type,
                         t.data_import_id,
                         t.amortize_months or "",
                         (

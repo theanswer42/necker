@@ -67,7 +67,7 @@ class TransactionService:
                     transaction.merchant_name,
                     transaction.auto_merchant_name,
                     float(transaction.amount),
-                    transaction.type,
+                    transaction.transaction_type,
                     (
                         json.dumps(transaction.additional_metadata)
                         if transaction.additional_metadata
@@ -116,7 +116,7 @@ class TransactionService:
                     t.merchant_name,
                     t.auto_merchant_name,
                     float(t.amount),
-                    t.type,
+                    t.transaction_type,
                     json.dumps(t.additional_metadata)
                     if t.additional_metadata
                     else None,
@@ -469,7 +469,7 @@ class TransactionService:
                     description=original.description,
                     bank_category=original.bank_category,
                     amount=accrued_amount,
-                    type=original.type,
+                    transaction_type=original.transaction_type,
                     additional_metadata=original.additional_metadata,
                     data_import_id=original.data_import_id,
                     category_id=original.category_id,
@@ -493,7 +493,7 @@ class TransactionService:
             description=row[5],
             bank_category=row[6],
             amount=Decimal(str(row[11])),
-            type=row[12],
+            transaction_type=row[12],
             additional_metadata=json.loads(row[13]) if row[13] else None,
             data_import_id=row[2],
             category_id=row[7],
