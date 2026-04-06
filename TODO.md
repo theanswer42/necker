@@ -7,7 +7,8 @@ Issues identified during code review, ordered by estimated effort (least to most
 - [x] **Add pydantic to dependencies** — `llm/providers/openai.py` imports pydantic but it's not in `pyproject.toml`; it only works transitively via the openai package.
   - **Plan**: Add `"pydantic>=2.0.0"` to `dependencies` in `pyproject.toml`, run `uv sync`, verify tests pass.
 
-- [ ] **Fix `total_changes` bug in `bulk_create`** — `services/transactions.py:140` uses `conn.total_changes` which counts all changes on the connection, not just the last `executemany`. Use `cursor.rowcount` instead.
+- [x] **Fix `total_changes` bug in `bulk_create`** — `services/transactions.py:140` uses `conn.total_changes` which counts all changes on the connection, not just the last `executemany`. Use `cursor.rowcount` instead.
+  - **Plan**: Capture cursor from `conn.executemany(...)` and return `cursor.rowcount`. Add a test that verifies the count is correct when prior inserts exist on the same connection.
 
 - [ ] **Enable foreign key enforcement** — `db/manager.py:33` opens SQLite connections without `PRAGMA foreign_keys = ON`, so all FK constraints (cascading deletes, referential integrity) are silently unenforced.
 
