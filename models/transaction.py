@@ -3,7 +3,6 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 import hashlib
-import json
 
 
 @dataclass
@@ -56,26 +55,3 @@ class Transaction:
             type=type,
             additional_metadata=additional_metadata,
         )
-
-    def to_dict(self) -> dict:
-        """Convert transaction to dictionary for database storage."""
-        return {
-            "id": self.id,
-            "account_id": self.account_id,
-            "transaction_date": self.transaction_date.isoformat(),
-            "post_date": self.post_date.isoformat() if self.post_date else None,
-            "description": self.description,
-            "bank_category": self.bank_category,
-            "category_id": self.category_id,
-            "auto_category_id": self.auto_category_id,
-            "merchant_name": self.merchant_name,
-            "auto_merchant_name": self.auto_merchant_name,
-            "amount": float(self.amount),
-            "transaction_type": self.type,
-            "raw_data": None,  # Will be set by ingestion module
-            "additional_metadata": (
-                json.dumps(self.additional_metadata)
-                if self.additional_metadata
-                else None
-            ),
-        }
