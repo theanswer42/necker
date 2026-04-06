@@ -29,15 +29,17 @@ If the input is ambiguous or matches multiple items, ask the user to clarify bef
 
 ## Step 3: Align with the user
 
-Present a brief implementation plan to the user:
+Present a brief implementation plan:
 - What you'll change and why
 - Any architectural concerns or trade-offs
 - What tests you'll write
 - Anything you're unsure about
 
-**Wait for the user to confirm or adjust the plan before proceeding.**
+**Use your judgment as a senior engineer:**
+- For straightforward, low-risk changes (e.g., adding a dependency, fixing a clear bug): state the plan, document it, and proceed to step 4 without waiting for confirmation.
+- For changes with architectural implications, ambiguity, or multiple valid approaches: **wait for the user to confirm or adjust the plan before proceeding.**
 
-Once aligned, document the agreed plan:
+Document the plan regardless:
 - **If the source is a GitHub issue**: Add a comment to the issue summarizing the implementation plan using `gh issue comment`.
 - **If the source is TODO.md**: Update the TODO item in TODO.md to include the implementation plan as a sub-bullet.
 
@@ -87,6 +89,7 @@ Fix any issues reported by `ruff check` before proceeding.
 Create a commit with a clear message that references the work item:
 - For TODO items: reference the item title
 - For GitHub issues: include `Fixes #<number>` or `Closes #<number>` in the commit body
+- **Important**: If the change modified `pyproject.toml` (dependency changes), always include `uv.lock` in the commit.
 
 ## Step 9: Update the work item
 
