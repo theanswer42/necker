@@ -27,7 +27,7 @@ class TestRowToTransaction:
         assert transaction.post_date == date(2025, 1, 16)
         assert transaction.description == "AMAZON.COM"
         assert transaction.amount == Decimal("45.99")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
         assert transaction.bank_category == "Shopping"
         assert isinstance(transaction.id, str)
         assert len(transaction.id) == 64
@@ -46,7 +46,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("500.00")
-        assert transaction.type == "income"
+        assert transaction.transaction_type == "income"
         assert transaction.bank_category == "Payments and Credits"
 
     def test_parse_transfer_directpay(self):
@@ -63,7 +63,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1250.00")
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
         assert transaction.description == "DIRECTPAY FULL BALANCE"
 
     def test_parse_amount_with_commas(self):
@@ -80,7 +80,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1234.56")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
 
     def test_parse_with_quotes(self):
         """Test parsing descriptions and categories with quotes."""
@@ -184,11 +184,11 @@ class TestIngest:
 
         assert len(transactions) == 3
         assert transactions[0].description == "STARBUCKS"
-        assert transactions[0].type == "expense"
+        assert transactions[0].transaction_type == "expense"
         assert transactions[1].description == "PAYMENT THANK YOU"
-        assert transactions[1].type == "income"
+        assert transactions[1].transaction_type == "income"
         assert transactions[2].description == "DIRECTPAY FULL BALANCE"
-        assert transactions[2].type == "transfer"
+        assert transactions[2].transaction_type == "transfer"
 
     def test_ingest_skips_malformed_rows(self):
         """Test that malformed rows are skipped gracefully."""

@@ -170,7 +170,7 @@ class OpenAIProvider(LLMProvider):
             lines.append(
                 f"- Description: '{txn.description}', "
                 f"Amount: ${txn.amount}, "
-                f"Type: {txn.type}, "
+                f"Type: {txn.transaction_type}, "
                 f"Category: {category_name} (ID {txn.category_id}){merchant_part}"
             )
 
@@ -184,7 +184,7 @@ class OpenAIProvider(LLMProvider):
                 f"- ID: {txn.id}, "
                 f"Description: '{txn.description}', "
                 f"Amount: ${txn.amount}, "
-                f"Type: {txn.type}"
+                f"Type: {txn.transaction_type}"
             )
 
         return "\n".join(lines)

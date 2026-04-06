@@ -33,7 +33,7 @@ class TestRowToTransaction:
         assert transaction.post_date is None  # AMEX doesn't have post date
         assert transaction.description == "AMAZON.COM"
         assert transaction.amount == Decimal("45.99")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
         assert transaction.bank_category == "Merchandise & Supplies-Internet Purchase"
         assert transaction.additional_metadata["appears_as"] == "AMAZON.COM*RETAIL"
         assert transaction.additional_metadata["address"] == "410 TERRY AVE N"
@@ -64,7 +64,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("500.00")
-        assert transaction.type == "income"
+        assert transaction.transaction_type == "income"
         assert transaction.bank_category == "Payments"
         # Empty metadata fields should not be included
         assert (
@@ -92,7 +92,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1250.00")
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
         assert transaction.description == "AUTOPAY PAYMENT - THANK YOU"
 
     def test_parse_amount_with_commas(self):
@@ -115,7 +115,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1234.56")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
 
     def test_parse_with_quotes(self):
         """Test parsing descriptions and categories with quotes."""
@@ -372,11 +372,11 @@ class TestIngest:
 
         assert len(transactions) == 3
         assert transactions[0].description == "STARBUCKS"
-        assert transactions[0].type == "expense"
+        assert transactions[0].transaction_type == "expense"
         assert transactions[1].description == "PAYMENT - THANK YOU"
-        assert transactions[1].type == "income"
+        assert transactions[1].transaction_type == "income"
         assert transactions[2].description == "AUTOPAY PAYMENT - THANK YOU"
-        assert transactions[2].type == "transfer"
+        assert transactions[2].transaction_type == "transfer"
 
     def test_ingest_with_full_metadata(self):
         """Test ingesting CSV with all metadata fields populated."""

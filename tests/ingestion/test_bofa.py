@@ -21,7 +21,7 @@ class TestRowToTransaction:
         assert transaction.post_date is None
         assert transaction.description == "STARBUCKS #12345"
         assert transaction.amount == Decimal("5.75")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
         assert transaction.bank_category is None
         assert transaction.additional_metadata == {"running_balance": "1,234.56"}
         assert isinstance(transaction.id, str)
@@ -35,7 +35,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("3500.00")
-        assert transaction.type == "income"
+        assert transaction.transaction_type == "income"
         assert transaction.description == "SALARY DEPOSIT"
 
     def test_parse_amount_with_commas(self):
@@ -46,7 +46,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1234.56")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
 
     def test_parse_amount_with_quotes(self):
         """Test parsing amounts and descriptions with quotes."""
@@ -70,7 +70,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
         assert transaction.amount == Decimal("150.00")
 
     def test_detect_chase_credit_card_transfer(self):
@@ -80,7 +80,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
 
     def test_detect_amex_credit_card_transfer(self):
         """Test detection of American Express payment as transfer."""
@@ -89,7 +89,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
 
     def test_detect_bofa_credit_card_transfer(self):
         """Test detection of Bank of America credit card payment as transfer."""
@@ -103,7 +103,7 @@ class TestRowToTransaction:
 
         transaction = row_to_transaction(row, account_id)
 
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
         assert transaction.amount == Decimal("400.00")
 
     def test_missing_date_raises_error(self):
@@ -183,11 +183,11 @@ Date,Description,Amount,Running Bal.
 
         assert len(transactions) == 3
         assert transactions[0].description == "STARBUCKS"
-        assert transactions[0].type == "expense"
+        assert transactions[0].transaction_type == "expense"
         assert transactions[1].description == "SALARY DEPOSIT"
-        assert transactions[1].type == "income"
+        assert transactions[1].transaction_type == "income"
         assert transactions[2].description == "CHASE CREDIT CRD DES:AUTOPAY"
-        assert transactions[2].type == "transfer"
+        assert transactions[2].transaction_type == "transfer"
 
     def test_ingest_skips_malformed_rows(self):
         """Test that malformed rows are skipped gracefully."""

@@ -29,7 +29,7 @@ class TestRowToTransaction:
         assert transaction.post_date == date(2025, 1, 16)
         assert transaction.description == "AMAZON.COM"
         assert transaction.amount == Decimal("45.99")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
         assert transaction.bank_category == "Shopping"
         assert transaction.additional_metadata is None
         assert isinstance(transaction.id, str)
@@ -51,7 +51,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("50.00")
-        assert transaction.type == "income"
+        assert transaction.transaction_type == "income"
 
     def test_parse_transfer_payment_type(self):
         """Test parsing transaction with Type='Payment' as transfer."""
@@ -69,7 +69,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("500.00")
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
         assert transaction.description == "ONLINE PAYMENT"
 
     def test_parse_transfer_automatic_payment(self):
@@ -88,7 +88,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1250.00")
-        assert transaction.type == "transfer"
+        assert transaction.transaction_type == "transfer"
 
     def test_parse_with_memo(self):
         """Test parsing transaction with memo field."""
@@ -124,7 +124,7 @@ class TestRowToTransaction:
         transaction = row_to_transaction(row, account_id)
 
         assert transaction.amount == Decimal("1234.56")
-        assert transaction.type == "expense"
+        assert transaction.transaction_type == "expense"
 
     def test_parse_with_quotes(self):
         """Test parsing descriptions and categories with quotes."""
@@ -290,11 +290,11 @@ class TestIngest:
 
         assert len(transactions) == 3
         assert transactions[0].description == "STARBUCKS"
-        assert transactions[0].type == "expense"
+        assert transactions[0].transaction_type == "expense"
         assert transactions[1].description == "REFUND"
-        assert transactions[1].type == "income"
+        assert transactions[1].transaction_type == "income"
         assert transactions[2].description == "AUTOMATIC PAYMENT - THANK YOU"
-        assert transactions[2].type == "transfer"
+        assert transactions[2].transaction_type == "transfer"
 
     def test_ingest_skips_malformed_rows(self):
         """Test that malformed rows are skipped gracefully."""
@@ -403,9 +403,9 @@ class TestIngest:
         transactions = ingest(source, account_id)
 
         assert len(transactions) == 3
-        assert transactions[0].type == "expense"
-        assert transactions[1].type == "transfer"
-        assert transactions[2].type == "income"
+        assert transactions[0].transaction_type == "expense"
+        assert transactions[1].transaction_type == "transfer"
+        assert transactions[2].transaction_type == "income"
 
     def test_ingest_with_memos(self):
         """Test that memo fields are properly captured in metadata."""

@@ -14,7 +14,7 @@ class Transaction:
     description: str
     bank_category: Optional[str]  # category from bank/CSV import
     amount: Decimal  # always positive
-    type: str  # 'income', 'expense', or 'transfer'
+    transaction_type: str  # 'income', 'expense', or 'transfer'
     additional_metadata: Optional[dict] = None
     data_import_id: int = (
         0  # reference to the data import operation (set during ingestion)
@@ -39,7 +39,7 @@ class Transaction:
         description: str,
         bank_category: Optional[str],
         amount: Decimal,
-        type: str,
+        transaction_type: str,
         additional_metadata: Optional[dict] = None,
     ) -> "Transaction":
         """Create a Transaction with auto-generated checksum ID."""
@@ -52,6 +52,6 @@ class Transaction:
             description=description,
             bank_category=bank_category,
             amount=amount,
-            type=type,
+            transaction_type=transaction_type,
             additional_metadata=additional_metadata,
         )
