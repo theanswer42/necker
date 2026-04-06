@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class Account:
     id: int
     name: str  # [a-z_] format, e.g., "bofa_checking"
-    type: str  # ingestion module name, e.g., "bofa"
+    account_type: str  # ingestion module name, e.g., "bofa"
     description: str  # human readable, e.g., "Bank of America Checking Account"
 
     def to_dict(self) -> dict:
@@ -13,6 +13,6 @@ class Account:
         return {
             "id": self.id,
             "name": self.name,
-            "type": self.type,
+            "account_type": self.account_type,
             "description": self.description,
         }

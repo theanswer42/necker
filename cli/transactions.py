@@ -36,13 +36,13 @@ def cmd_ingest(args, services):
     logger.info(
         f"Ingesting transactions for account: {account.name} (ID: {account.id})"
     )
-    logger.info(f"Account type: {account.type}")
+    logger.info(f"Account type: {account.account_type}")
     logger.info(f"CSV file: {args.csv_file}")
     logger.info("-" * 80)
 
     # Get the ingestion module for this account type
     try:
-        ingestion_module = get_ingestion_module(account.type)
+        ingestion_module = get_ingestion_module(account.account_type)
     except ValueError as e:
         logger.error(str(e))
         sys.exit(1)
