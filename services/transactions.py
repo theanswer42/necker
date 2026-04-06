@@ -1,10 +1,13 @@
 """Transaction service for database operations."""
 
 import json
+import logging
 from typing import List, Optional
 from datetime import date
 from decimal import Decimal
 from models.transaction import Transaction
+
+logger = logging.getLogger(__name__)
 
 # SQL Query Constants
 _TRANSACTION_SELECT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
@@ -88,6 +91,17 @@ class TransactionService:
     def bulk_create(self, transactions: List[Transaction]) -> int:
         """Create multiple transactions in the database in a single transaction.
 
+        Uses INSERT OR IGNORE, so rows whose ID already exists in the database are
+        silently skipped. This is intentional for idempotent re-imports of the same
+        CSV file. Callers can detect skipped rows by comparing the return value to
+        len(transactions) — a lower count means some rows were not inserted.
+
+        Within-batch ID collisions (two entries in the same input list sharing an ID)
+        are logged as warnings. These occur when a bank statement contains two
+        transactions with identical CSV rows (same date, description, and amount),
+        which hash to the same checksum ID. The second entry is dropped and data is
+        lost. This is a known limitation of the checksum-based deduplication scheme.
+
         Args:
             transactions: List of Transaction objects to insert.
 
@@ -99,6 +113,25 @@ class TransactionService:
         """
         if not transactions:
             return 0
+
+        # Detect within-batch ID collisions before inserting.
+        seen_ids: dict[str, int] = {}
+        for i, t in enumerate(transactions):
+            if t.id in seen_ids:
+                logger.warning(
+                    "Within-batch checksum collision: transaction at index %d has the "
+                    "same ID as index %d (id=%s, description=%r, date=%s, amount=%s). "
+                    "The later entry will be dropped. This happens when two CSV rows "
+                    "are byte-for-byte identical.",
+                    i,
+                    seen_ids[t.id],
+                    t.id[:12],
+                    t.description,
+                    t.transaction_date,
+                    t.amount,
+                )
+            else:
+                seen_ids[t.id] = i
 
         with self.db_manager.connect() as conn:
             # Prepare all transaction data
