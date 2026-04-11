@@ -65,7 +65,7 @@ and fix imports.
 
 Run `uv run ruff check .` and `uv run pytest` to verify.
 
-### 3. Extract ingest orchestration from CLI into services layer
+### 3. Extract ingest orchestration from CLI into services layer ✅
 
 `cli/transactions.py::cmd_ingest` currently contains significant business logic:
 CSV parsing via ingestion module, archive file creation, DataImport record creation,

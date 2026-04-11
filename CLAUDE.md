@@ -53,7 +53,7 @@ uv sync --group dev
   (SQL queries and row-to-object mapping) for each model
 - `services/` contains the `Services` dependency-injection container
   that exposes repositories, plus business logic modules (`analysis.py`,
-  `categorization.py`)
+  `categorization.py`, `ingestion.py`)
 
 ## Pre-commit Checks
 
