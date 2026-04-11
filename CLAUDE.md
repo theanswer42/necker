@@ -71,10 +71,10 @@ If `ruff check` reports errors, fix them before committing. Do not skip this ste
 
 ## Architecture Notes
 
-The project is currently in early stages with a minimal main.py file. The presence of sample bank CSV files suggests this will be a financial data processing tool, likely for:
-- Parsing different bank transaction formats
-- Standardizing transaction data
-- Categorizing transactions
-- Financial analysis or reporting
+The project follows a layered architecture:
 
-The CSV samples show different bank formats with common fields like Date, Description, Amount, and Category, indicating the tool will need to handle format variations across different financial institutions.
+- **repositories layer** (`repositories/`): pure DB operations — SQL queries and row-to-object mapping, no business logic
+- **services layer** (`services/`): business logic — ingestion orchestration, analysis, auto-categorization; also hosts the `Services` DI container
+- **interface layer** (`cli/`): input validation and output only — delegates all logic to services
+
+The `Services` class in `services/base.py` is the central dependency-injection container. It wires together the database manager and all repositories, and is passed through to service functions and CLI commands.
