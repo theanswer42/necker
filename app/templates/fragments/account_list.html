@@ -1,0 +1,25 @@
+<section>
+  <h2>Accounts</h2>
+  {% if accounts %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for account in accounts %}
+      <tr>
+        <td>{{ account.name }}</td>
+        <td>{{ account.account_type }}</td>
+        <td>{{ account.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No accounts found.</p>
+  {% endif %}
+</section>
