@@ -129,7 +129,14 @@ e.g., `uv run python -m cli serve`.
 
 Verify the server starts and serves the base template at `http://localhost:5000/`.
 
-### 6. Add API blueprint with core resource routes
+### 6. Add API blueprint with core resource routes ✅
+
+Implementation plan:
+- Fill in `app/api/routes.py` with 6 read-only routes using `current_app.services`
+- Serialize models inline (Account.to_dict(), Category/Transaction via helper)
+- Error format: `{"error": "not_found"|"bad_request", "message": "..."}` with 400/404
+- `GET /api/transactions/summary` registered before `<id>` to avoid route conflict
+- Tests: Flask test client, fixtures create accounts/categories/transactions in DB
 
 Create `app/api/__init__.py` and `app/api/routes.py`.
 
