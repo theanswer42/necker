@@ -98,7 +98,15 @@ Final verification pass:
 
 ## Phase 2: Add Flask web server
 
-### 5. Add Flask app factory and dependencies
+### 5. Add Flask app factory and dependencies ✅
+
+Implementation plan:
+- Add `flask` to `pyproject.toml` dependencies
+- Create `app/` package with `create_app()` factory, registering empty API/UI blueprints and serving `base.html` at `/`
+- Create `app/templates/base.html` with htmx CDN script tag, nav, and content block
+- Create `app/static/` directory placeholder
+- Add `cli/server.py` with `cmd_serve` and register `serve` subcommand in `cli/__main__.py`
+- Tests: Flask test client for app factory and root route
 
 Add Flask as a dependency in `pyproject.toml` and run `uv sync`.
 
