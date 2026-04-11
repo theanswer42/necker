@@ -27,12 +27,12 @@ class Services:
         self.db_manager = db_manager or DatabaseManager(config)
 
         # Lazy import to avoid circular dependencies
-        from services.accounts import AccountService
-        from services.transactions import TransactionService
-        from services.data_imports import DataImportService
-        from services.categories import CategoryService
+        from repositories.accounts import AccountRepository
+        from repositories.transactions import TransactionRepository
+        from repositories.data_imports import DataImportRepository
+        from repositories.categories import CategoryRepository
 
-        self.accounts = AccountService(self.db_manager)
-        self.transactions = TransactionService(self.db_manager)
-        self.data_imports = DataImportService(self.db_manager)
-        self.categories = CategoryService(self.db_manager)
+        self.accounts = AccountRepository(self.db_manager)
+        self.transactions = TransactionRepository(self.db_manager)
+        self.data_imports = DataImportRepository(self.db_manager)
+        self.categories = CategoryRepository(self.db_manager)

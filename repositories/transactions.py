@@ -1,4 +1,4 @@
-"""Transaction service for database operations."""
+"""Transaction repository for database operations."""
 
 import json
 import logging
@@ -23,11 +23,11 @@ _TRANSACTION_INSERT_PLACEHOLDERS = (
 )
 
 
-class TransactionService:
-    """Service for managing transactions."""
+class TransactionRepository:
+    """Repository for managing transactions."""
 
     def __init__(self, db_manager):
-        """Initialize the transaction service.
+        """Initialize the transaction repository.
 
         Args:
             db_manager: Database manager instance for database operations.

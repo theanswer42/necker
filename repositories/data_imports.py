@@ -1,15 +1,15 @@
-"""DataImport service for database operations."""
+"""DataImport repository for database operations."""
 
 from typing import List, Optional
 from datetime import datetime
 from models.data_import import DataImport
 
 
-class DataImportService:
-    """Service for managing data import records."""
+class DataImportRepository:
+    """Repository for managing data import records."""
 
     def __init__(self, db_manager):
-        """Initialize the data import service.
+        """Initialize the data import repository.
 
         Args:
             db_manager: Database manager instance for database operations.

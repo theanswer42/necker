@@ -49,8 +49,10 @@ uv sync --group dev
 - `db/` contains code for database connection management, and
   migrations
 - `llm/` contains code and prompts to communicate with LLMs
-- `services/` contains code for relatively simple queries on the
-  database
+- `repositories/` contains repository classes — pure DB operations
+  (SQL queries and row-to-object mapping) for each model
+- `services/` contains the `Services` dependency-injection container
+  that exposes repositories to the rest of the app
 - `tools/` contains higher level tools that make use of the services
 
 ## Pre-commit Checks

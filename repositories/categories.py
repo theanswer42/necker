@@ -1,14 +1,14 @@
-"""Category service for database operations."""
+"""Category repository for database operations."""
 
 from typing import List, Optional
 from models.category import Category
 
 
-class CategoryService:
-    """Service for managing categories."""
+class CategoryRepository:
+    """Repository for managing categories."""
 
     def __init__(self, db_manager):
-        """Initialize the category service.
+        """Initialize the category repository.
 
         Args:
             db_manager: Database manager instance for database operations.
