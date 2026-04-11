@@ -10,7 +10,7 @@
 
 ## Phase 1: Restructure existing code into repositories/services/cli layers
 
-### 1. Create `repositories/` package from current DB-access classes
+### 1. Create `repositories/` package from current DB-access classes ✅
 
 Move the four DB-access classes from `services/` into a new `repositories/` package.
 These classes contain only SQL queries and row-to-object mapping — no business logic.

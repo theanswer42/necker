@@ -1,14 +1,14 @@
-"""Account service for database operations."""
+"""Account repository for database operations."""
 
 from typing import List, Optional
 from models.account import Account
 
 
-class AccountService:
-    """Service for managing accounts."""
+class AccountRepository:
+    """Repository for managing accounts."""
 
     def __init__(self, db_manager):
-        """Initialize the account service.
+        """Initialize the account repository.
 
         Args:
             db_manager: Database manager instance for database operations.
