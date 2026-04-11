@@ -156,7 +156,13 @@ from the architecture doc.
 
 Add basic tests for the API routes using Flask's test client.
 
-### 7. Add UI blueprint with htmx transaction views
+### 7. Add UI blueprint with htmx transaction views ✅
+
+Implementation plan:
+- Fill in `app/ui/routes.py` with 3 routes; `/ui/transactions` defaults to current month if no `?month=` given
+- Fragment templates: transaction_list (table + prev/next month nav), account_list (table), category_list (table)
+- `base.html` nav already has correct htmx links from item 5 — no change needed
+- Tests: Flask test client checking status codes and key HTML strings
 
 Create `app/ui/__init__.py` and `app/ui/routes.py`.
 

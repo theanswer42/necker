@@ -1,0 +1,23 @@
+<section>
+  <h2>Categories</h2>
+  {% if categories %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for category in categories %}
+      <tr>
+        <td>{{ category.name }}</td>
+        <td>{{ category.description or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No categories found.</p>
+  {% endif %}
+</section>
