@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from ingestion import get_ingestion_module
-from categorization import auto_categorize
+from services.categorization import auto_categorize
 from logger import get_logger
 
 logger = get_logger()

@@ -1,4 +1,4 @@
-"""Auto-categorization module using LLM for transaction categorization.
+"""Auto-categorization service using LLM for transaction categorization.
 
 This module provides functionality to automatically categorize transactions
 using a Large Language Model (LLM). The LLM learns from historical manually-

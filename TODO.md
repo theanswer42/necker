@@ -36,7 +36,7 @@ Update all test files that directly import these classes (check `tests/services/
 
 Run `uv run ruff check .` and `uv run pytest` to verify nothing is broken.
 
-### 2. Move business logic into `services/` package
+### 2. Move business logic into `services/` package ✅
 
 Now that the DB-access classes have moved out of `services/`, repurpose `services/`
 as the business logic layer.

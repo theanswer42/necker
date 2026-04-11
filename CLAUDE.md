@@ -52,8 +52,8 @@ uv sync --group dev
 - `repositories/` contains repository classes — pure DB operations
   (SQL queries and row-to-object mapping) for each model
 - `services/` contains the `Services` dependency-injection container
-  that exposes repositories to the rest of the app
-- `tools/` contains higher level tools that make use of the services
+  that exposes repositories, plus business logic modules (`analysis.py`,
+  `categorization.py`)
 
 ## Pre-commit Checks
 
