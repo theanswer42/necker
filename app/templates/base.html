@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Necker{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/">Necker</a>
+      <a hx-get="/ui/transactions" hx-target="#content" hx-push-url="true">Transactions</a>
+      <a hx-get="/ui/accounts" hx-target="#content" hx-push-url="true">Accounts</a>
+      <a hx-get="/ui/categories" hx-target="#content" hx-push-url="true">Categories</a>
+    </nav>
+  </header>
+
+  <main id="content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>Necker — Personal Finance</p>
+  </footer>
+</body>
+</html>

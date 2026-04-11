@@ -20,7 +20,7 @@ Examples:
 
 import sys
 import argparse
-from cli import accounts, transactions, migrate, categories
+from cli import accounts, transactions, migrate, categories, server
 from config import load_config
 from services.base import Services
 from db.manager import DatabaseManager
@@ -48,6 +48,7 @@ def main():
     transactions.setup_parser(subparsers)
     categories.setup_parser(subparsers)
     migrate.setup_parser(subparsers)
+    server.setup_parser(subparsers)
 
     # Parse arguments and execute
     args = parser.parse_args()
@@ -64,9 +65,9 @@ def main():
             # Create services container for dependency injection
             services = Services(config)
 
-            # Commands that use services: accounts, transactions, categories
+            # Commands that use services: accounts, transactions, categories, serve
             # Commands that use db_manager directly: migrate
-            if args.command in ("accounts", "transactions", "categories"):
+            if args.command in ("accounts", "transactions", "categories", "serve"):
                 args.func(args, services)
             elif args.command == "migrate":
                 # Migrate commands need db_manager for raw database operations
