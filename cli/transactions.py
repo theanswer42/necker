@@ -2,12 +2,8 @@
 
 import sys
 import csv
-import gzip
-import shutil
 from pathlib import Path
-from datetime import datetime
-from ingestion import get_ingestion_module
-from services.categorization import auto_categorize
+from services.ingestion import ingest_csv, update_from_csv
 from logger import get_logger
 
 logger = get_logger()
@@ -20,13 +16,11 @@ def cmd_ingest(args, services):
         args: Parsed command-line arguments with csv_file and account_name
         services: Services container with accounts and transactions services
     """
-    # Validate CSV file exists
     csv_path = Path(args.csv_file)
     if not csv_path.exists():
         logger.error(f"File not found: {args.csv_file}")
         sys.exit(1)
 
-    # Look up account by name
     account = services.accounts.find_by_name(args.account_name)
     if not account:
         logger.error(f"Account '{args.account_name}' not found.")
@@ -40,112 +34,36 @@ def cmd_ingest(args, services):
     logger.info(f"CSV file: {args.csv_file}")
     logger.info("-" * 80)
 
-    # Get the ingestion module for this account type
     try:
-        ingestion_module = get_ingestion_module(account.account_type)
+        result = ingest_csv(csv_path, account, services)
     except ValueError as e:
         logger.error(str(e))
         sys.exit(1)
-
-    # Ingest transactions from CSV
-    try:
-        with open(csv_path, "r") as f:
-            transactions = ingestion_module.ingest(f, account.id)
-
-        logger.info(f"\nParsed {len(transactions)} transactions from CSV")
-
-        if not transactions:
-            logger.info("No transactions to import.")
-            return
-
-        # Archive the CSV file if enabled
-        archive_filename = None
-        config = services.config
-        if config.archive_enabled:
-            # Create archive directory if it doesn't exist
-            config.archive_dir.mkdir(parents=True, exist_ok=True)
-
-            # Generate archive filename: {account_name}_{timestamp}_{original_filename}.gz
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            original_filename = csv_path.name
-            archive_filename = f"{account.name}_{timestamp}_{original_filename}.gz"
-            archive_path = config.archive_dir / archive_filename
-
-            # Gzip and copy the file
-            with open(csv_path, "rb") as f_in:
-                with gzip.open(archive_path, "wb") as f_out:
-                    shutil.copyfileobj(f_in, f_out)
-
-            logger.info(f"Archived CSV to: {archive_path}")
-
-        # Create DataImport record
-        data_import = services.data_imports.create(account.id, archive_filename)
-        logger.info(f"Created data import record (ID: {data_import.id})")
-
-        # Set data_import_id on all transactions
-        for transaction in transactions:
-            transaction.data_import_id = data_import.id
-
-        # Bulk insert transactions
-        inserted_count = services.transactions.bulk_create(transactions)
-
-        logger.info(f"✓ Successfully inserted {inserted_count} transactions")
-
-        if inserted_count < len(transactions):
-            skipped = len(transactions) - inserted_count
-            logger.info(f"  ({skipped} duplicate transaction(s) skipped)")
-
-        # Auto-categorize newly inserted transactions
-        # This should never fail the ingest process
-        if inserted_count > 0:
-            try:
-                logger.info("\nRunning auto-categorization...")
-
-                # Get historical transactions for training (most recent manually categorized)
-                historical_transactions = (
-                    services.transactions.find_historical_for_categorization(
-                        account.id, limit=200
-                    )
-                )
-                logger.info(
-                    f"Found {len(historical_transactions)} historical categorized transactions"
-                )
-
-                # Get all available categories
-                categories = services.categories.find_all()
-                logger.info(f"Using {len(categories)} available categories")
-
-                # Run auto-categorization
-                categorized_transactions = auto_categorize(
-                    transactions, categories, historical_transactions, services.config
-                )
-
-                # Update transactions with auto_category_id and auto_merchant_name
-                # Only update transactions that have either field set
-                to_update = [
-                    t
-                    for t in categorized_transactions
-                    if t.auto_category_id is not None
-                    or t.auto_merchant_name is not None
-                ]
-
-                if to_update:
-                    updated_count = services.transactions.batch_update(
-                        to_update, ["auto_category_id", "auto_merchant_name"]
-                    )
-                    logger.info(f"✓ Auto-categorized {updated_count} transaction(s)")
-                else:
-                    logger.info("No transactions were auto-categorized")
-
-            except Exception as e:
-                # Log error but don't fail the ingest
-                logger.warning(
-                    f"Auto-categorization failed (ingest was successful): {e}"
-                )
-
     except Exception as e:
         logger.error(f"Error during ingestion: {e}")
         sys.exit(1)
+
+    logger.info(f"\nParsed {result['parsed']} transactions from CSV")
+
+    if result["parsed"] == 0:
+        logger.info("No transactions to import.")
+        return
+
+    if result["archive_filename"]:
+        archive_path = services.config.archive_dir / result["archive_filename"]
+        logger.info(f"Archived CSV to: {archive_path}")
+
+    logger.info(f"Created data import record (ID: {result['data_import_id']})")
+    logger.info(f"✓ Successfully inserted {result['inserted']} transactions")
+
+    if result["skipped"] > 0:
+        logger.info(f"  ({result['skipped']} duplicate transaction(s) skipped)")
+
+    if result["inserted"] > 0:
+        if result["categorized"] > 0:
+            logger.info(f"✓ Auto-categorized {result['categorized']} transaction(s)")
+        else:
+            logger.info("No transactions were auto-categorized")
 
 
 def cmd_set_category(args, services):
@@ -351,9 +269,6 @@ def cmd_update_from_csv(args, services):
         args: Parsed command-line arguments
         services: Services container with transactions, categories services
     """
-    from dateutil.relativedelta import relativedelta
-
-    # Validate CSV file exists
     csv_path = Path(args.input)
     if not csv_path.exists():
         logger.error(f"File not found: {args.input}")
@@ -361,200 +276,32 @@ def cmd_update_from_csv(args, services):
 
     logger.info(f"Reading updates from: {csv_path}")
 
-    # Load all categories for name-to-id mapping
-    categories = services.categories.find_all()
-    category_name_to_id = {cat.name: cat.id for cat in categories}
-
-    # Read CSV file
     try:
-        with open(csv_path, "r") as csvfile:
-            reader = csv.DictReader(csvfile)
-
-            # Validate headers
-            expected_headers = {
-                "id",
-                "transaction_date",
-                "post_date",
-                "description",
-                "account_name",
-                "bank_category",
-                "category_name",
-                "auto_category_name",
-                "merchant_name",
-                "auto_merchant_name",
-                "amount",
-                "transaction_type",
-                "data_import_id",
-                "amortize_months",
-                "amortize_end_date",
-            }
-            if not expected_headers.issubset(set(reader.fieldnames or [])):
-                logger.error(
-                    f"CSV file is missing required headers. Expected: {expected_headers}"
-                )
-                sys.exit(1)
-
-            # Process each row
-            # Dictionary mapping transaction_id -> (transaction, set of fields to update)
-            transactions_to_update = {}
-            category_updated_count = 0
-            accepted_auto_count = 0
-            merchant_updated_count = 0
-            accepted_auto_merchant_count = 0
-            amortization_updated_count = 0
-            skipped_count = 0
-
-            for row in reader:
-                transaction_id = row["id"]
-                category_name = row["category_name"].strip()
-                auto_category_name = row["auto_category_name"].strip()
-                merchant_name = row["merchant_name"].strip()
-                auto_merchant_name = row["auto_merchant_name"].strip()
-                amortize_months_str = row["amortize_months"].strip()
-
-                # Fetch transaction from database
-                transaction = services.transactions.find(transaction_id)
-                if not transaction:
-                    logger.warning(f"Transaction not found: {transaction_id}, skipping")
-                    skipped_count += 1
-                    continue
-
-                # Process category updates
-                if category_name:
-                    # User provided a category - use it
-                    if category_name not in category_name_to_id:
-                        logger.warning(
-                            f"Category '{category_name}' not found for transaction {transaction_id[:8]}..., skipping"
-                        )
-                        skipped_count += 1
-                        continue
-                    new_category_id = category_name_to_id[category_name]
-
-                    # Only update if category has changed
-                    if transaction.category_id != new_category_id:
-                        transaction.category_id = new_category_id
-                        if transaction_id not in transactions_to_update:
-                            transactions_to_update[transaction_id] = (
-                                transaction,
-                                set(),
-                            )
-                        transactions_to_update[transaction_id][1].add("category_id")
-                        category_updated_count += 1
-                else:
-                    # No user category - accept auto category if available
-                    if auto_category_name and transaction.auto_category_id:
-                        # Only update if category_id is different from auto_category_id
-                        if transaction.category_id != transaction.auto_category_id:
-                            transaction.category_id = transaction.auto_category_id
-                            if transaction_id not in transactions_to_update:
-                                transactions_to_update[transaction_id] = (
-                                    transaction,
-                                    set(),
-                                )
-                            transactions_to_update[transaction_id][1].add("category_id")
-                            accepted_auto_count += 1
-
-                # Process merchant name updates
-                if merchant_name:
-                    # User provided a merchant name - use it
-                    # Only update if merchant_name has changed
-                    if transaction.merchant_name != merchant_name:
-                        transaction.merchant_name = merchant_name
-                        if transaction_id not in transactions_to_update:
-                            transactions_to_update[transaction_id] = (
-                                transaction,
-                                set(),
-                            )
-                        transactions_to_update[transaction_id][1].add("merchant_name")
-                        merchant_updated_count += 1
-                else:
-                    # No user merchant name - accept auto merchant name if available
-                    if auto_merchant_name and transaction.auto_merchant_name:
-                        # Only update if merchant_name is different from auto_merchant_name
-                        if transaction.merchant_name != transaction.auto_merchant_name:
-                            transaction.merchant_name = transaction.auto_merchant_name
-                            if transaction_id not in transactions_to_update:
-                                transactions_to_update[transaction_id] = (
-                                    transaction,
-                                    set(),
-                                )
-                            transactions_to_update[transaction_id][1].add(
-                                "merchant_name"
-                            )
-                            accepted_auto_merchant_count += 1
-
-                # Process amortization updates
-                if amortize_months_str:
-                    try:
-                        amortize_months = int(amortize_months_str)
-                        if amortize_months < 1:
-                            logger.warning(
-                                f"Invalid amortize_months {amortize_months} for transaction {transaction_id[:8]}..., skipping"
-                            )
-                            continue
-
-                        # Check if amortization has changed
-                        if transaction.amortize_months != amortize_months:
-                            # Calculate new amortize_end_date using month-boundary convention
-                            # End on last day of month before the actual anniversary date
-                            amortize_end_date = (
-                                transaction.transaction_date
-                                + relativedelta(months=amortize_months - 1, day=31)
-                            )
-
-                            # Update fields
-                            transaction.amortize_months = amortize_months
-                            transaction.amortize_end_date = amortize_end_date
-
-                            if transaction_id not in transactions_to_update:
-                                transactions_to_update[transaction_id] = (
-                                    transaction,
-                                    set(),
-                                )
-                            transactions_to_update[transaction_id][1].add(
-                                "amortize_months"
-                            )
-                            transactions_to_update[transaction_id][1].add(
-                                "amortize_end_date"
-                            )
-                            amortization_updated_count += 1
-                    except ValueError:
-                        logger.warning(
-                            f"Invalid amortize_months value '{amortize_months_str}' for transaction {transaction_id[:8]}..., skipping"
-                        )
-
-        if not transactions_to_update:
-            logger.info("No updates needed.")
-            return
-
-        logger.info(f"\nUpdating {len(transactions_to_update)} transaction(s)...")
-        logger.info(f"  Category manual updates: {category_updated_count}")
-        logger.info(f"  Category auto-accepted: {accepted_auto_count}")
-        logger.info(f"  Merchant manual updates: {merchant_updated_count}")
-        logger.info(f"  Merchant auto-accepted: {accepted_auto_merchant_count}")
-        logger.info(f"  Amortization updates: {amortization_updated_count}")
-        if skipped_count > 0:
-            logger.info(f"  Skipped: {skipped_count}")
-
-        # Batch update each transaction with its specific fields
-        total_updated = 0
-        for transaction_id, (
-            transaction,
-            fields_to_update,
-        ) in transactions_to_update.items():
-            updated = services.transactions.batch_update(
-                [transaction], list(fields_to_update)
-            )
-            total_updated += updated
-
-        logger.info(f"\n✓ Successfully updated {total_updated} transaction(s)")
-
+        result = update_from_csv(csv_path, services)
+    except ValueError as e:
+        logger.error(str(e))
+        sys.exit(1)
     except csv.Error as e:
         logger.error(f"Error reading CSV file: {e}")
         sys.exit(1)
     except Exception as e:
         logger.error(f"Error updating transactions: {e}")
         sys.exit(1)
+
+    if result["total_updated"] == 0 and result["skipped"] == 0:
+        logger.info("No updates needed.")
+        return
+
+    logger.info(f"\nUpdating {result['total_updated']} transaction(s)...")
+    logger.info(f"  Category manual updates: {result['category_updated']}")
+    logger.info(f"  Category auto-accepted: {result['category_auto_accepted']}")
+    logger.info(f"  Merchant manual updates: {result['merchant_updated']}")
+    logger.info(f"  Merchant auto-accepted: {result['merchant_auto_accepted']}")
+    logger.info(f"  Amortization updates: {result['amortization_updated']}")
+    if result["skipped"] > 0:
+        logger.info(f"  Skipped: {result['skipped']}")
+
+    logger.info(f"\n✓ Successfully updated {result['total_updated']} transaction(s)")
 
 
 def cmd_set_amortization(args, services):
