@@ -1,4 +1,4 @@
-"""Transaction analysis tools."""
+"""Transaction analysis service."""
 
 from datetime import date
 from typing import Dict, List, Optional

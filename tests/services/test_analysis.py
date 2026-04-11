@@ -1,10 +1,10 @@
-"""Tests for transaction analysis tools."""
+"""Tests for transaction analysis service."""
 
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
 from models.transaction import Transaction
-from tools.transactions import get_period_transactions, get_period_summary
+from services.analysis import get_period_transactions, get_period_summary
 
 
 class TestGetPeriodTransactions:
