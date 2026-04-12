@@ -81,6 +81,45 @@ def accounts():
     return render_template("fragments/account_list.html", accounts=all_accounts)
 
 
+@ui_bp.route("/accounts/new")
+def account_new():
+    from ingestion import get_available_modules
+
+    return render_template(
+        "fragments/account_form.html",
+        available_types=get_available_modules(),
+        error=None,
+        form_data={},
+    )
+
+
+@ui_bp.route("/accounts", methods=["POST"])
+def account_create():
+    from ingestion import get_available_modules
+    from services.accounts import create_account
+
+    name = request.form.get("name", "").strip()
+    account_type = request.form.get("account_type", "").strip()
+    description = request.form.get("description", "").strip()
+    form_data = {"name": name, "account_type": account_type, "description": description}
+
+    try:
+        create_account(current_app.services, name, account_type, description)
+    except ValueError as e:
+        return (
+            render_template(
+                "fragments/account_form.html",
+                available_types=get_available_modules(),
+                error=str(e),
+                form_data=form_data,
+            ),
+            400,
+        )
+
+    all_accounts = current_app.services.accounts.find_all()
+    return render_template("fragments/account_list.html", accounts=all_accounts)
+
+
 @ui_bp.route("/categories")
 def categories():
     all_categories = current_app.services.categories.find_all()
