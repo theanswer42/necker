@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     additional_metadata TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES accounts(id),
-    FOREIGN KEY (data_import_id) REFERENCES data_imports(id) ON DELETE CASCADE
+    FOREIGN KEY (data_import_id) REFERENCES data_imports(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (auto_category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
 -- Index for category lookups
