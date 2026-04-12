@@ -8,6 +8,10 @@ from pathlib import Path
 from flask import render_template, request, current_app
 
 from app.ui import ui_bp
+from repositories.accounts import AccountRepository
+from repositories.budgets import BudgetRepository
+from repositories.categories import CategoryRepository
+from repositories.transactions import TransactionRepository
 
 
 def _parse_month(value: str):
@@ -56,10 +60,12 @@ def transactions():
         today = date.today()
         year, month = today.year, today.month
 
-    txns = current_app.services.transactions.get_transactions_by_month(year, month)
+    txns = TransactionRepository(current_app.db_manager).get_transactions_by_month(
+        year, month
+    )
 
     # Build category lookup for display
-    all_categories = current_app.services.categories.find_all()
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
     categories = {c.id: c.name for c in all_categories}
 
     month_label = f"{year:04d}/{month:02d}"
@@ -78,7 +84,7 @@ def transactions():
 
 @ui_bp.route("/accounts")
 def accounts():
-    all_accounts = current_app.services.accounts.find_all()
+    all_accounts = AccountRepository(current_app.db_manager).find_all()
     return render_template("fragments/account_list.html", accounts=all_accounts)
 
 
@@ -97,7 +103,7 @@ def account_new():
 @ui_bp.route("/accounts", methods=["POST"])
 def account_create():
     from ingestion import get_available_modules
-    from services.accounts import create_account
+    from services.accounts import AccountService
 
     name = request.form.get("name", "").strip()
     account_type = request.form.get("account_type", "").strip()
@@ -105,7 +111,9 @@ def account_create():
     form_data = {"name": name, "account_type": account_type, "description": description}
 
     try:
-        create_account(current_app.services, name, account_type, description)
+        AccountService(current_app.db_manager).create_account(
+            name, account_type, description
+        )
     except ValueError as e:
         return (
             render_template(
@@ -117,19 +125,19 @@ def account_create():
             400,
         )
 
-    all_accounts = current_app.services.accounts.find_all()
+    all_accounts = AccountRepository(current_app.db_manager).find_all()
     return render_template("fragments/account_list.html", accounts=all_accounts)
 
 
 @ui_bp.route("/categories")
 def categories():
-    all_categories = current_app.services.categories.find_all()
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
     return render_template("fragments/category_list.html", categories=all_categories)
 
 
 @ui_bp.route("/imports/new")
 def import_form():
-    all_accounts = current_app.services.accounts.find_all()
+    all_accounts = AccountRepository(current_app.db_manager).find_all()
     return render_template(
         "fragments/import_form.html",
         accounts=all_accounts,
@@ -140,14 +148,16 @@ def import_form():
 
 @ui_bp.route("/imports", methods=["POST"])
 def import_upload():
-    from services.ingestion import ingest_csv
+    from services.ingestion import IngestionService
+
+    accounts_repo = AccountRepository(current_app.db_manager)
 
     # Validate account_id
     account_id_str = request.form.get("account_id", "").strip()
     try:
         account_id = int(account_id_str)
     except ValueError:
-        all_accounts = current_app.services.accounts.find_all()
+        all_accounts = accounts_repo.find_all()
         return (
             render_template(
                 "fragments/import_form.html",
@@ -158,9 +168,9 @@ def import_upload():
             400,
         )
 
-    account = current_app.services.accounts.find(account_id)
+    account = accounts_repo.find(account_id)
     if account is None:
-        all_accounts = current_app.services.accounts.find_all()
+        all_accounts = accounts_repo.find_all()
         return (
             render_template(
                 "fragments/import_form.html",
@@ -174,7 +184,7 @@ def import_upload():
     # Validate file upload
     file = request.files.get("csv_file")
     if not file or not file.filename:
-        all_accounts = current_app.services.accounts.find_all()
+        all_accounts = accounts_repo.find_all()
         return (
             render_template(
                 "fragments/import_form.html",
@@ -186,14 +196,17 @@ def import_upload():
         )
 
     # Save to temp directory and ingest
+    config = current_app.config["NECKER_CONFIG"]
     with tempfile.TemporaryDirectory() as tmpdir:
         csv_path = Path(tmpdir) / file.filename
         file.save(str(csv_path))
 
         try:
-            result = ingest_csv(csv_path, account, current_app.services)
+            result = IngestionService(current_app.db_manager, config).ingest_csv(
+                csv_path, account
+            )
         except ValueError as e:
-            all_accounts = current_app.services.accounts.find_all()
+            all_accounts = accounts_repo.find_all()
             return (
                 render_template(
                     "fragments/import_form.html",
@@ -204,7 +217,7 @@ def import_upload():
                 400,
             )
         except Exception:
-            all_accounts = current_app.services.accounts.find_all()
+            all_accounts = accounts_repo.find_all()
             return (
                 render_template(
                     "fragments/import_form.html",
@@ -227,10 +240,10 @@ def import_upload():
         )
 
     # Fetch just-imported transactions for review
-    transactions = current_app.services.transactions.find_by_data_import_id(
+    transactions = TransactionRepository(current_app.db_manager).find_by_data_import_id(
         result["data_import_id"]
     )
-    all_categories = current_app.services.categories.find_all()
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
     categories_map = {c.id: c.name for c in all_categories}
 
     return render_template(
@@ -248,11 +261,11 @@ def import_upload():
 
 @ui_bp.route("/imports/<int:data_import_id>/review", methods=["POST"])
 def import_review(data_import_id):
-    transactions = current_app.services.transactions.find_by_data_import_id(
-        data_import_id
-    )
+    transactions_repo = TransactionRepository(current_app.db_manager)
+
+    transactions = transactions_repo.find_by_data_import_id(data_import_id)
     if not transactions:
-        all_accounts = current_app.services.accounts.find_all()
+        all_accounts = AccountRepository(current_app.db_manager).find_all()
         return (
             render_template(
                 "fragments/import_form.html",
@@ -263,7 +276,7 @@ def import_review(data_import_id):
             404,
         )
 
-    all_categories = current_app.services.categories.find_all()
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
     valid_category_ids = {c.id for c in all_categories}
     categories_map = {c.id: c.name for c in all_categories}
 
@@ -287,7 +300,9 @@ def import_review(data_import_id):
                 row_errors.setdefault(txn.id, {})["category"] = "Invalid category."
 
     if row_errors:
-        account = current_app.services.accounts.find(transactions[0].account_id)
+        account = AccountRepository(current_app.db_manager).find(
+            transactions[0].account_id
+        )
         return (
             render_template(
                 "fragments/import_review.html",
@@ -309,7 +324,7 @@ def import_review(data_import_id):
         txn.category_id = int(edit["category_id"]) if edit["category_id"] else None
         txn.merchant_name = edit["merchant_name"] or None
 
-    updated_count = current_app.services.transactions.batch_update(
+    updated_count = transactions_repo.batch_update(
         transactions, ["category_id", "merchant_name"]
     )
 
@@ -331,7 +346,7 @@ def import_review(data_import_id):
 
 @ui_bp.route("/budgets")
 def budgets():
-    all_budgets = current_app.services.budgets.find_all()
+    all_budgets = BudgetRepository(current_app.db_manager).find_all()
     return render_template(
         "fragments/budget_list.html", budgets=all_budgets, error=None
     )
@@ -339,7 +354,7 @@ def budgets():
 
 @ui_bp.route("/budgets/new")
 def budget_new():
-    all_categories = current_app.services.categories.find_all()
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
     return render_template(
         "fragments/budget_form.html",
         categories=all_categories,
@@ -358,7 +373,7 @@ def budget_create():
         "period_type": period_type,
         "amount": amount_str,
     }
-    all_categories = current_app.services.categories.find_all()
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
 
     try:
         category_id = int(category_id_str)
@@ -410,7 +425,9 @@ def budget_create():
         )
 
     try:
-        current_app.services.budgets.create(category_id, period_type, amount_cents)
+        BudgetRepository(current_app.db_manager).create(
+            category_id, period_type, amount_cents
+        )
     except sqlite3.IntegrityError:
         return (
             render_template(
@@ -422,7 +439,7 @@ def budget_create():
             400,
         )
 
-    all_budgets = current_app.services.budgets.find_all()
+    all_budgets = BudgetRepository(current_app.db_manager).find_all()
     return render_template(
         "fragments/budget_list.html", budgets=all_budgets, error=None
     )
@@ -430,13 +447,13 @@ def budget_create():
 
 @ui_bp.route("/budgets/<int:budget_id>", methods=["DELETE"])
 def budget_delete(budget_id):
-    current_app.services.budgets.delete(budget_id)
+    BudgetRepository(current_app.db_manager).delete(budget_id)
     return "", 200
 
 
 @ui_bp.route("/budgets/<int:budget_id>/edit")
 def budget_edit(budget_id):
-    budget = current_app.services.budgets.find(budget_id)
+    budget = BudgetRepository(current_app.db_manager).find(budget_id)
     if budget is None:
         return "", 404
     return render_template("fragments/budget_amount_edit.html", budget=budget)
@@ -444,7 +461,7 @@ def budget_edit(budget_id):
 
 @ui_bp.route("/budgets/<int:budget_id>/amount")
 def budget_amount(budget_id):
-    budget = current_app.services.budgets.find(budget_id)
+    budget = BudgetRepository(current_app.db_manager).find(budget_id)
     if budget is None:
         return "", 404
     return render_template("fragments/budget_amount_display.html", budget=budget)
@@ -452,20 +469,21 @@ def budget_amount(budget_id):
 
 @ui_bp.route("/budgets/<int:budget_id>", methods=["PATCH"])
 def budget_update(budget_id):
+    budgets_repo = BudgetRepository(current_app.db_manager)
     amount_str = request.form.get("amount", "").strip()
 
     try:
         amount_dollars = float(amount_str)
         amount_cents = int(round(amount_dollars * 100))
     except ValueError:
-        budget = current_app.services.budgets.find(budget_id)
+        budget = budgets_repo.find(budget_id)
         return render_template("fragments/budget_amount_edit.html", budget=budget), 400
 
     if amount_cents <= 0:
-        budget = current_app.services.budgets.find(budget_id)
+        budget = budgets_repo.find(budget_id)
         return render_template("fragments/budget_amount_edit.html", budget=budget), 400
 
-    budget = current_app.services.budgets.update_amount(budget_id, amount_cents)
+    budget = budgets_repo.update_amount(budget_id, amount_cents)
     if budget is None:
         return "", 404
 

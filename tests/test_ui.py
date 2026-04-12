@@ -8,7 +8,10 @@ import pytest
 
 from app.app import create_app
 from models.transaction import Transaction
-from services.base import Services
+from repositories.accounts import AccountRepository
+from repositories.categories import CategoryRepository
+from repositories.data_imports import DataImportRepository
+from repositories.transactions import TransactionRepository
 
 
 def _make_bofa_csv_bytes(rows):
@@ -29,8 +32,7 @@ def _make_bofa_csv_bytes(rows):
 
 @pytest.fixture
 def app(test_config, db_manager_with_schema):
-    svc = Services(test_config, db_manager=db_manager_with_schema)
-    flask_app = create_app(config=test_config, services=svc)
+    flask_app = create_app(config=test_config, db_manager=db_manager_with_schema)
     flask_app.config["TESTING"] = True
     flask_app.config["WTF_CSRF_ENABLED"] = False
     return flask_app
@@ -42,27 +44,35 @@ def client(app):
 
 
 @pytest.fixture
-def svc(app):
-    return app.services
+def repos(app):
+    db = app.db_manager
+
+    class _Repos:
+        accounts = AccountRepository(db)
+        transactions = TransactionRepository(db)
+        categories = CategoryRepository(db)
+        data_imports = DataImportRepository(db)
+
+    return _Repos()
 
 
 @pytest.fixture
-def account(svc):
-    return svc.accounts.create("bofa_checking", "bofa", "Bank of America Checking")
+def account(repos):
+    return repos.accounts.create("bofa_checking", "bofa", "Bank of America Checking")
 
 
 @pytest.fixture
-def category(svc):
-    return svc.categories.create("Food", "Food expenses")
+def category(repos):
+    return repos.categories.create("Food", "Food expenses")
 
 
 @pytest.fixture
-def data_import(svc, account):
-    return svc.data_imports.create(account_id=account.id, filename=None)
+def data_import(repos, account):
+    return repos.data_imports.create(account_id=account.id, filename=None)
 
 
 @pytest.fixture
-def transaction(svc, account, data_import):
+def transaction(repos, account, data_import):
     t = Transaction.create_with_checksum(
         raw_data="ui-row1",
         account_id=account.id,
@@ -74,7 +84,7 @@ def transaction(svc, account, data_import):
         transaction_type="expense",
     )
     t.data_import_id = data_import.id
-    return svc.transactions.create(t)
+    return repos.transactions.create(t)
 
 
 # --- /ui/accounts ---
@@ -180,20 +190,20 @@ class TestAccountCreateUI:
         )
         assert resp.status_code == 400
 
-    def test_account_create_duplicate_name_returns_400(self, client, svc):
-        svc.accounts.create("my_account", "bofa", "Existing")
+    def test_account_create_duplicate_name_returns_400(self, client, repos):
+        repos.accounts.create("my_account", "bofa", "Existing")
         resp = client.post(
             "/ui/accounts",
             data={"name": "my_account", "account_type": "chase", "description": "New"},
         )
         assert resp.status_code == 400
 
-    def test_account_create_persists_to_db(self, client, svc):
+    def test_account_create_persists_to_db(self, client, repos):
         client.post(
             "/ui/accounts",
             data={"name": "new_account", "account_type": "amex", "description": "Amex"},
         )
-        found = svc.accounts.find_by_name("new_account")
+        found = repos.accounts.find_by_name("new_account")
         assert found is not None
         assert found.account_type == "amex"
 
@@ -342,7 +352,7 @@ class TestImportUI:
         assert "Coffee Shop" in html
         assert "Salary" in html
 
-    def test_import_upload_valid_csv_inserts_transactions(self, client, svc, account):
+    def test_import_upload_valid_csv_inserts_transactions(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(
             [["01/15/2024", "Coffee Shop", "-5.00", "995.00"]]
         )
@@ -354,11 +364,11 @@ class TestImportUI:
             },
             content_type="multipart/form-data",
         )
-        txns = svc.transactions.find_by_account(account.id)
+        txns = repos.transactions.find_by_account(account.id)
         assert len(txns) == 1
         assert txns[0].description == "Coffee Shop"
 
-    def test_import_upload_all_duplicates_returns_success(self, client, svc, account):
+    def test_import_upload_all_duplicates_returns_success(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(
             [["01/15/2024", "Coffee Shop", "-5.00", "995.00"]]
         )
@@ -398,7 +408,7 @@ class TestImportUI:
         assert resp.status_code == 400
         assert "Error" in resp.data.decode()
 
-    def test_import_review_valid_edits_returns_success(self, client, svc, account):
+    def test_import_review_valid_edits_returns_success(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(
             [["01/15/2024", "Coffee Shop", "-5.00", "995.00"]]
         )
@@ -414,7 +424,7 @@ class TestImportUI:
         assert upload_resp.status_code == 200
 
         # Get data_import_id from db
-        txns = svc.transactions.find_by_account(account.id)
+        txns = repos.transactions.find_by_account(account.id)
         assert len(txns) == 1
         data_import_id = txns[0].data_import_id
 
@@ -430,10 +440,10 @@ class TestImportUI:
         assert "Import Complete" in resp.data.decode()
 
         # Verify merchant was saved
-        updated = svc.transactions.find(txns[0].id)
+        updated = repos.transactions.find(txns[0].id)
         assert updated.merchant_name == "Starbucks"
 
-    def test_import_review_invalid_category_returns_400(self, client, svc, account):
+    def test_import_review_invalid_category_returns_400(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(
             [["01/15/2024", "Coffee Shop", "-5.00", "995.00"]]
         )
@@ -446,7 +456,7 @@ class TestImportUI:
             content_type="multipart/form-data",
         )
 
-        txns = svc.transactions.find_by_account(account.id)
+        txns = repos.transactions.find_by_account(account.id)
         data_import_id = txns[0].data_import_id
 
         resp = client.post(
@@ -469,8 +479,8 @@ class TestImportUI:
         )
         assert resp.status_code == 404
 
-    def test_import_review_saves_category(self, client, svc, account):
-        category = svc.categories.create("Food", "Food expenses", None)
+    def test_import_review_saves_category(self, client, repos, account):
+        category = repos.categories.create("Food", "Food expenses", None)
         csv_bytes = _make_bofa_csv_bytes(
             [["01/15/2024", "Coffee Shop", "-5.00", "995.00"]]
         )
@@ -483,7 +493,7 @@ class TestImportUI:
             content_type="multipart/form-data",
         )
 
-        txns = svc.transactions.find_by_account(account.id)
+        txns = repos.transactions.find_by_account(account.id)
         data_import_id = txns[0].data_import_id
 
         client.post(
@@ -495,5 +505,5 @@ class TestImportUI:
             content_type="application/x-www-form-urlencoded",
         )
 
-        updated = svc.transactions.find(txns[0].id)
+        updated = repos.transactions.find(txns[0].id)
         assert updated.category_id == category.id

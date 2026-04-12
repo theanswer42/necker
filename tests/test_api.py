@@ -4,14 +4,17 @@ import pytest
 from datetime import date
 
 from app.app import create_app
-from services.base import Services
 from models.transaction import Transaction
+from repositories.accounts import AccountRepository
+from repositories.budgets import BudgetRepository
+from repositories.categories import CategoryRepository
+from repositories.data_imports import DataImportRepository
+from repositories.transactions import TransactionRepository
 
 
 @pytest.fixture
 def app(test_config, db_manager_with_schema):
-    svc = Services(test_config, db_manager=db_manager_with_schema)
-    flask_app = create_app(config=test_config, services=svc)
+    flask_app = create_app(config=test_config, db_manager=db_manager_with_schema)
     flask_app.config["TESTING"] = True
     return flask_app
 
@@ -22,27 +25,37 @@ def client(app):
 
 
 @pytest.fixture
-def svc(app):
-    return app.services
+def repos(app):
+    """Convenience access to repositories."""
+    db = app.db_manager
+
+    class _Repos:
+        accounts = AccountRepository(db)
+        transactions = TransactionRepository(db)
+        categories = CategoryRepository(db)
+        data_imports = DataImportRepository(db)
+        budgets = BudgetRepository(db)
+
+    return _Repos()
 
 
 @pytest.fixture
-def account(svc):
-    return svc.accounts.create("bofa_checking", "bofa", "Bank of America Checking")
+def account(repos):
+    return repos.accounts.create("bofa_checking", "bofa", "Bank of America Checking")
 
 
 @pytest.fixture
-def category(svc):
-    return svc.categories.create("Food", "Food expenses")
+def category(repos):
+    return repos.categories.create("Food", "Food expenses")
 
 
 @pytest.fixture
-def data_import(svc, account):
-    return svc.data_imports.create(account_id=account.id, filename=None)
+def data_import(repos, account):
+    return repos.data_imports.create(account_id=account.id, filename=None)
 
 
 @pytest.fixture
-def transaction(svc, account, data_import):
+def transaction(repos, account, data_import):
     t = Transaction.create_with_checksum(
         raw_data="row1",
         account_id=account.id,
@@ -54,7 +67,7 @@ def transaction(svc, account, data_import):
         transaction_type="expense",
     )
     t.data_import_id = data_import.id
-    return svc.transactions.create(t)
+    return repos.transactions.create(t)
 
 
 # --- Accounts ---

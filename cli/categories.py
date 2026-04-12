@@ -4,13 +4,15 @@ import sys
 import json
 from pathlib import Path
 from logger import get_logger
+from repositories.categories import CategoryRepository
 
 logger = get_logger()
 
 
-def cmd_list(args, services):
+def cmd_list(args, db_manager, config):
     """List all categories in the database."""
-    categories = services.categories.find_all()
+    categories_repo = CategoryRepository(db_manager)
+    categories = categories_repo.find_all()
 
     if not categories:
         logger.info("No categories found.")
@@ -24,7 +26,7 @@ def cmd_list(args, services):
         if category.description:
             logger.info(f"Description: {category.description}")
         if category.parent_id:
-            parent = services.categories.find(category.parent_id)
+            parent = categories_repo.find(category.parent_id)
             parent_name = parent.name if parent else "Unknown"
             logger.info(f"Parent: {parent_name} (ID: {category.parent_id})")
         logger.info("-" * 80)
@@ -32,8 +34,10 @@ def cmd_list(args, services):
     logger.info(f"\nTotal categories: {len(categories)}")
 
 
-def cmd_create(args, services):
+def cmd_create(args, db_manager, config):
     """Interactively create a new category."""
+    categories_repo = CategoryRepository(db_manager)
+
     print("\nCreate New Category")
     print("=" * 80)
 
@@ -55,7 +59,7 @@ def cmd_create(args, services):
         try:
             parent_id = int(parent_input)
             # Verify parent exists
-            parent = services.categories.find(parent_id)
+            parent = categories_repo.find(parent_id)
             if not parent:
                 logger.error(f"Parent category with ID {parent_id} not found.")
                 sys.exit(1)
@@ -65,7 +69,7 @@ def cmd_create(args, services):
 
     # Create category via service
     try:
-        category = services.categories.create(name, description, parent_id)
+        category = categories_repo.create(name, description, parent_id)
 
         logger.info(f"\n✓ Category created successfully with ID: {category.id}")
         logger.info(f"  Name: {category.name}")
@@ -79,12 +83,13 @@ def cmd_create(args, services):
         sys.exit(1)
 
 
-def cmd_delete(args, services):
+def cmd_delete(args, db_manager, config):
     """Delete a category by ID."""
+    categories_repo = CategoryRepository(db_manager)
     category_id = args.category_id
 
     # Check if category exists
-    category = services.categories.find(category_id)
+    category = categories_repo.find(category_id)
     if not category:
         logger.error(f"Category with ID {category_id} not found.")
         sys.exit(1)
@@ -107,7 +112,7 @@ def cmd_delete(args, services):
 
     # Delete category
     try:
-        if services.categories.delete(category_id):
+        if categories_repo.delete(category_id):
             logger.info(f"✓ Category '{category.name}' deleted successfully.")
         else:
             logger.error("Failed to delete category.")
@@ -117,8 +122,10 @@ def cmd_delete(args, services):
         sys.exit(1)
 
 
-def cmd_seed(args, services):
+def cmd_seed(args, db_manager, config):
     """Seed categories from JSON file."""
+    categories_repo = CategoryRepository(db_manager)
+
     # Get path to seed file
     seed_file = Path(__file__).parent.parent / "db" / "seed" / "categories.json"
 
@@ -154,7 +161,7 @@ def cmd_seed(args, services):
             continue
 
         # Check if parent category exists
-        existing = services.categories.find_by_name(name)
+        existing = categories_repo.find_by_name(name)
         if existing:
             logger.info(f"⊘ Skipped '{name}' (already exists)")
             skipped_count += 1
@@ -162,7 +169,7 @@ def cmd_seed(args, services):
         else:
             # Create parent category
             try:
-                parent = services.categories.create(name, description)
+                parent = categories_repo.create(name, description)
                 logger.info(f"✓ Created '{name}' (ID: {parent.id})")
                 created_count += 1
                 parent_id = parent.id
@@ -183,14 +190,14 @@ def cmd_seed(args, services):
             prefixed_child_name = f"{name}/{child_name}"
 
             # Check if child category exists
-            existing_child = services.categories.find_by_name(prefixed_child_name)
+            existing_child = categories_repo.find_by_name(prefixed_child_name)
             if existing_child:
                 logger.info(f"  ⊘ Skipped '{prefixed_child_name}' (already exists)")
                 skipped_count += 1
             else:
                 # Create child category
                 try:
-                    child = services.categories.create(
+                    child = categories_repo.create(
                         prefixed_child_name, child_description, parent_id
                     )
                     logger.info(f"  ✓ Created '{prefixed_child_name}' (ID: {child.id})")

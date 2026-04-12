@@ -3,13 +3,13 @@
 import pytest
 
 from app.app import create_app
-from services.base import Services
+from repositories.budgets import BudgetRepository
+from repositories.categories import CategoryRepository
 
 
 @pytest.fixture
 def app(test_config, db_manager_with_schema):
-    svc = Services(test_config, db_manager=db_manager_with_schema)
-    flask_app = create_app(config=test_config, services=svc)
+    flask_app = create_app(config=test_config, db_manager=db_manager_with_schema)
     flask_app.config["TESTING"] = True
     flask_app.config["WTF_CSRF_ENABLED"] = False
     return flask_app
@@ -21,18 +21,24 @@ def client(app):
 
 
 @pytest.fixture
-def svc(app):
-    return app.services
+def repos(app):
+    db = app.db_manager
+
+    class _Repos:
+        categories = CategoryRepository(db)
+        budgets = BudgetRepository(db)
+
+    return _Repos()
 
 
 @pytest.fixture
-def category(svc):
-    return svc.categories.create("Food", "Food expenses")
+def category(repos):
+    return repos.categories.create("Food", "Food expenses")
 
 
 @pytest.fixture
-def budget(svc, category):
-    return svc.budgets.create(category.id, "monthly", 50000)
+def budget(repos, category):
+    return repos.budgets.create(category.id, "monthly", 50000)
 
 
 class TestListBudgets:

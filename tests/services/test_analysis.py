@@ -4,7 +4,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 from models.transaction import Transaction
-from services.analysis import get_period_transactions, get_period_summary
+from services.analysis import AnalysisService
 
 
 class TestGetPeriodTransactions:
@@ -49,8 +49,7 @@ class TestGetPeriodTransactions:
         services.transactions.create(t2)
 
         # Get period transactions for January 2024
-        result = get_period_transactions(
-            services,
+        result = AnalysisService(services.db_manager).get_period_transactions(
             date(2024, 1, 1),
             date(2024, 1, 31),
         )
@@ -93,8 +92,7 @@ class TestGetPeriodTransactions:
             services.transactions.create(t)
 
         # Get Q1 2024
-        result = get_period_transactions(
-            services,
+        result = AnalysisService(services.db_manager).get_period_transactions(
             date(2024, 1, 1),
             date(2024, 3, 31),
         )
@@ -131,8 +129,7 @@ class TestGetPeriodTransactions:
             services.transactions.create(t)
 
         # Get Nov 2024 - Jan 2025
-        result = get_period_transactions(
-            services,
+        result = AnalysisService(services.db_manager).get_period_transactions(
             date(2024, 11, 1),
             date(2025, 1, 31),
         )
@@ -197,8 +194,7 @@ class TestGetPeriodTransactions:
         services.transactions.create(t3)
 
         # Filter by category1 only
-        result = get_period_transactions(
-            services,
+        result = AnalysisService(services.db_manager).get_period_transactions(
             date(2024, 1, 1),
             date(2024, 1, 31),
             category_ids=[category1.id],
@@ -233,8 +229,7 @@ class TestGetPeriodTransactions:
         services.transactions.create(t)
 
         # Get Jan-Mar 2024 (Feb and Mar will be empty)
-        result = get_period_transactions(
-            services,
+        result = AnalysisService(services.db_manager).get_period_transactions(
             date(2024, 1, 1),
             date(2024, 3, 31),
         )
@@ -275,8 +270,7 @@ class TestGetPeriodTransactions:
         services.transactions.create(t)
 
         # Get Jan-Apr 2024
-        result = get_period_transactions(
-            services,
+        result = AnalysisService(services.db_manager).get_period_transactions(
             date(2024, 1, 1),
             date(2024, 4, 30),
         )
@@ -348,8 +342,7 @@ class TestGetPeriodSummary:
         services.transactions.create(t3)
 
         # Get summary
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 1, 31),
         )
@@ -382,8 +375,7 @@ class TestGetPeriodSummary:
         # No category_id set
         services.transactions.create(t)
 
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 1, 31),
         )
@@ -414,8 +406,7 @@ class TestGetPeriodSummary:
             t.category_id = category.id
             services.transactions.create(t)
 
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 1, 31),
         )
@@ -447,8 +438,7 @@ class TestGetPeriodSummary:
         t.amortize_end_date = t.transaction_date + relativedelta(months=11, day=31)
         services.transactions.create(t)
 
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 1, 31),
         )
@@ -483,8 +473,7 @@ class TestGetPeriodSummary:
         services.transactions.create(t)
 
         # Get Jan-Mar summary
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 3, 31),
         )
@@ -543,8 +532,7 @@ class TestGetPeriodSummary:
         services.transactions.create(t2)
 
         # Filter by category1 only
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 1, 31),
             category_ids=[category1.id],
@@ -578,8 +566,7 @@ class TestGetPeriodSummary:
             t.category_id = category.id
             services.transactions.create(t)
 
-        result = get_period_summary(
-            services,
+        result = AnalysisService(services.db_manager).get_period_summary(
             date(2024, 1, 1),
             date(2024, 3, 31),
         )

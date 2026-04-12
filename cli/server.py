@@ -6,16 +6,17 @@ from logger import get_logger
 logger = get_logger()
 
 
-def cmd_serve(args, services):
+def cmd_serve(args, db_manager, config):
     """Run the Flask development server.
 
     Args:
         args: Parsed command-line arguments (host, port, debug)
-        services: Services container (passed through to the app factory)
+        db_manager: Database manager instance
+        config: Application configuration
     """
     from app.app import create_app
 
-    app = create_app(config=services.config, services=services)
+    app = create_app(config=config, db_manager=db_manager)
 
     logger.info(f"Starting Necker web server on http://{args.host}:{args.port}/")
     app.run(host=args.host, port=args.port, debug=args.debug)

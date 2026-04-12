@@ -5,7 +5,7 @@ import pytest
 from datetime import date
 from pathlib import Path
 
-from services.ingestion import ingest_csv, update_from_csv
+from services.ingestion import IngestionService
 
 
 def _make_bofa_csv(
@@ -75,7 +75,9 @@ class TestIngestCsv:
             ],
         )
 
-        result = ingest_csv(csv_path, account, services)
+        result = IngestionService(services.db_manager, services.config).ingest_csv(
+            csv_path, account
+        )
 
         assert result["parsed"] == 2
         assert result["inserted"] == 2
@@ -93,7 +95,9 @@ class TestIngestCsv:
         account = services.accounts.create("test_account", "bofa", "Test Account")
         csv_path = _make_bofa_csv(tmp_path, [])
 
-        result = ingest_csv(csv_path, account, services)
+        result = IngestionService(services.db_manager, services.config).ingest_csv(
+            csv_path, account
+        )
 
         assert result["parsed"] == 0
         assert result["inserted"] == 0
@@ -112,12 +116,16 @@ class TestIngestCsv:
         )
 
         # First import
-        result1 = ingest_csv(csv_path, account, services)
+        result1 = IngestionService(services.db_manager, services.config).ingest_csv(
+            csv_path, account
+        )
         assert result1["inserted"] == 1
         assert result1["skipped"] == 0
 
         # Second import of same file
-        result2 = ingest_csv(csv_path, account, services)
+        result2 = IngestionService(services.db_manager, services.config).ingest_csv(
+            csv_path, account
+        )
         assert result2["parsed"] == 1
         assert result2["inserted"] == 0
         assert result2["skipped"] == 1
@@ -139,7 +147,9 @@ class TestIngestCsv:
         )
 
         with pytest.raises(ValueError):
-            ingest_csv(csv_path, account, services)
+            IngestionService(services.db_manager, services.config).ingest_csv(
+                csv_path, account
+            )
 
     def test_ingest_creates_data_import_record(self, services, tmp_path):
         """Test that a DataImport record is created for each ingest."""
@@ -151,7 +161,9 @@ class TestIngestCsv:
             ],
         )
 
-        result = ingest_csv(csv_path, account, services)
+        result = IngestionService(services.db_manager, services.config).ingest_csv(
+            csv_path, account
+        )
 
         data_import = services.data_imports.find(result["data_import_id"])
         assert data_import is not None
@@ -176,7 +188,6 @@ class TestIngestCsv:
             llm_openai_api_key="",
             llm_openai_model="gpt-4o-mini",
         )
-        services.config = config
 
         account = services.accounts.create("test_account", "bofa", "Test Account")
         csv_path = _make_bofa_csv(
@@ -186,13 +197,12 @@ class TestIngestCsv:
             ],
         )
 
-        result = ingest_csv(csv_path, account, services)
+        result = IngestionService(services.db_manager, config).ingest_csv(
+            csv_path, account
+        )
 
         assert result["archive_filename"] is not None
         assert (archive_dir / result["archive_filename"]).exists()
-
-        # Restore config
-        services.config = services.config
 
 
 class TestUpdateFromCsv:
@@ -239,7 +249,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["category_updated"] == 1
         assert result["total_updated"] == 1
@@ -275,7 +287,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["category_auto_accepted"] == 1
         assert result["total_updated"] == 1
@@ -305,7 +319,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["merchant_updated"] == 1
         assert result["total_updated"] == 1
@@ -335,7 +351,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["amortization_updated"] == 1
         assert result["total_updated"] == 1
@@ -362,7 +380,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["skipped"] == 1
         assert result["total_updated"] == 0
@@ -389,7 +409,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["skipped"] == 1
         assert result["total_updated"] == 0
@@ -415,7 +437,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["total_updated"] == 0
         assert result["skipped"] == 0
@@ -428,7 +452,9 @@ class TestUpdateFromCsv:
             f.write("a,b\n")
 
         with pytest.raises(ValueError, match="missing required headers"):
-            update_from_csv(csv_path, services)
+            IngestionService(services.db_manager, services.config).update_from_csv(
+                csv_path
+            )
 
     def test_multiple_updates_same_transaction(self, services, tmp_path):
         """Test that category and merchant can be updated in the same row."""
@@ -454,7 +480,9 @@ class TestUpdateFromCsv:
             ],
         )
 
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(services.db_manager, services.config).update_from_csv(
+            csv_path
+        )
 
         assert result["category_updated"] == 1
         assert result["merchant_updated"] == 1

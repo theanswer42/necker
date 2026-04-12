@@ -3,13 +3,14 @@
 import sys
 from ingestion import get_available_modules
 from logger import get_logger
+from repositories.accounts import AccountRepository
 
 logger = get_logger()
 
 
-def cmd_list(args, services):
+def cmd_list(args, db_manager, config):
     """List all accounts in the database."""
-    accounts = services.accounts.find_all()
+    accounts = AccountRepository(db_manager).find_all()
 
     if not accounts:
         logger.info("No accounts found.")
@@ -27,9 +28,9 @@ def cmd_list(args, services):
     logger.info(f"\nTotal accounts: {len(accounts)}")
 
 
-def cmd_create(args, services):
+def cmd_create(args, db_manager, config):
     """Interactively create a new account."""
-    from services.accounts import create_account
+    from services.accounts import AccountService
 
     available_types = get_available_modules()
 
@@ -46,7 +47,9 @@ def cmd_create(args, services):
     ).strip()
 
     try:
-        account = create_account(services, name, account_type, description)
+        account = AccountService(db_manager).create_account(
+            name, account_type, description
+        )
 
         logger.info(f"\n✓ Account created successfully with ID: {account.id}")
         logger.info(f"  Name: {account.name}")

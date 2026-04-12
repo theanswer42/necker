@@ -3,25 +3,29 @@
 import sys
 import csv
 from pathlib import Path
-from services.ingestion import ingest_csv, update_from_csv
 from logger import get_logger
+from repositories.accounts import AccountRepository
+from repositories.categories import CategoryRepository
+from repositories.transactions import TransactionRepository
+from services.ingestion import IngestionService
 
 logger = get_logger()
 
 
-def cmd_ingest(args, services):
+def cmd_ingest(args, db_manager, config):
     """Ingest transactions from a CSV file for a specific account.
 
     Args:
         args: Parsed command-line arguments with csv_file and account_name
-        services: Services container with accounts and transactions services
+        db_manager: Database manager instance
+        config: Application configuration
     """
     csv_path = Path(args.csv_file)
     if not csv_path.exists():
         logger.error(f"File not found: {args.csv_file}")
         sys.exit(1)
 
-    account = services.accounts.find_by_name(args.account_name)
+    account = AccountRepository(db_manager).find_by_name(args.account_name)
     if not account:
         logger.error(f"Account '{args.account_name}' not found.")
         logger.info("Use 'python -m cli accounts list' to see available accounts.")
@@ -35,7 +39,7 @@ def cmd_ingest(args, services):
     logger.info("-" * 80)
 
     try:
-        result = ingest_csv(csv_path, account, services)
+        result = IngestionService(db_manager, config).ingest_csv(csv_path, account)
     except ValueError as e:
         logger.error(str(e))
         sys.exit(1)
@@ -50,7 +54,7 @@ def cmd_ingest(args, services):
         return
 
     if result["archive_filename"]:
-        archive_path = services.config.archive_dir / result["archive_filename"]
+        archive_path = config.archive_dir / result["archive_filename"]
         logger.info(f"Archived CSV to: {archive_path}")
 
     logger.info(f"Created data import record (ID: {result['data_import_id']})")
@@ -66,18 +70,22 @@ def cmd_ingest(args, services):
             logger.info("No transactions were auto-categorized")
 
 
-def cmd_set_category(args, services):
+def cmd_set_category(args, db_manager, config):
     """Set the category for a transaction.
 
     Args:
         args: Parsed command-line arguments with transaction_id and category
-        services: Services container with transactions and categories services
+        db_manager: Database manager instance
+        config: Application configuration
     """
+    transactions_repo = TransactionRepository(db_manager)
+    categories_repo = CategoryRepository(db_manager)
+
     transaction_id = args.transaction_id
     category_input = args.category
 
     # Look up transaction
-    transaction = services.transactions.find(transaction_id)
+    transaction = transactions_repo.find(transaction_id)
     if not transaction:
         logger.error(f"Transaction with ID '{transaction_id}' not found.")
         sys.exit(1)
@@ -86,10 +94,10 @@ def cmd_set_category(args, services):
     category = None
     try:
         category_id = int(category_input)
-        category = services.categories.find(category_id)
+        category = categories_repo.find(category_id)
     except ValueError:
         # Not a number, try as category name
-        category = services.categories.find_by_name(category_input)
+        category = categories_repo.find_by_name(category_input)
 
     if not category:
         logger.error(f"Category '{category_input}' not found.")
@@ -99,7 +107,7 @@ def cmd_set_category(args, services):
     # Update transaction category_id
     try:
         transaction.category_id = category.id
-        success = services.transactions.update(transaction, ["category_id"])
+        success = transactions_repo.update(transaction, ["category_id"])
 
         if not success:
             logger.error("Failed to update transaction.")
@@ -114,13 +122,18 @@ def cmd_set_category(args, services):
         sys.exit(1)
 
 
-def cmd_export(args, services):
+def cmd_export(args, db_manager, config):
     """Export transactions to CSV.
 
     Args:
         args: Parsed command-line arguments
-        services: Services container with transactions, accounts, categories services
+        db_manager: Database manager instance
+        config: Application configuration
     """
+    accounts_repo = AccountRepository(db_manager)
+    transactions_repo = TransactionRepository(db_manager)
+    categories_repo = CategoryRepository(db_manager)
+
     # Validate that both --start-date and --end-date are provided together
     if args.start_date and not args.end_date:
         logger.error("--start-date requires --end-date to be specified")
@@ -134,7 +147,7 @@ def cmd_export(args, services):
 
     # Handle account filter if specified
     if args.account:
-        account = services.accounts.find_by_name(args.account)
+        account = accounts_repo.find_by_name(args.account)
         if not account:
             logger.error(f"Account '{args.account}' not found.")
             logger.info("Use 'python -m cli accounts list' to see available accounts.")
@@ -155,7 +168,7 @@ def cmd_export(args, services):
                 sys.exit(1)
 
             logger.info(f"Exporting transactions for {year}/{month:02d}")
-            transactions = services.transactions.get_transactions_by_month(
+            transactions = transactions_repo.get_transactions_by_month(
                 year, month, account_id=account_id
             )
         else:
@@ -169,7 +182,7 @@ def cmd_export(args, services):
             end_date = f"{int(end_year):04d}-{int(end_month):02d}-{int(end_day):02d}"
 
             logger.info(f"Exporting transactions from {start_date} to {end_date}")
-            transactions = services.transactions.get_transactions_by_date_range(
+            transactions = transactions_repo.get_transactions_by_date_range(
                 start_date, end_date, account_id=account_id
             )
 
@@ -187,8 +200,8 @@ def cmd_export(args, services):
     logger.info(f"Found {len(transactions)} transaction(s)")
 
     # Get all accounts and categories for name lookups
-    accounts = services.accounts.find_all()
-    categories = services.categories.find_all()
+    accounts = accounts_repo.find_all()
+    categories = categories_repo.find_all()
 
     # Build lookup dictionaries
     account_map = {acc.id: acc.name for acc in accounts}
@@ -262,12 +275,13 @@ def cmd_export(args, services):
         sys.exit(1)
 
 
-def cmd_update_from_csv(args, services):
+def cmd_update_from_csv(args, db_manager, config):
     """Update transactions from a CSV file.
 
     Args:
         args: Parsed command-line arguments
-        services: Services container with transactions, categories services
+        db_manager: Database manager instance
+        config: Application configuration
     """
     csv_path = Path(args.input)
     if not csv_path.exists():
@@ -277,7 +291,7 @@ def cmd_update_from_csv(args, services):
     logger.info(f"Reading updates from: {csv_path}")
 
     try:
-        result = update_from_csv(csv_path, services)
+        result = IngestionService(db_manager, config).update_from_csv(csv_path)
     except ValueError as e:
         logger.error(str(e))
         sys.exit(1)
@@ -304,14 +318,17 @@ def cmd_update_from_csv(args, services):
     logger.info(f"\n✓ Successfully updated {result['total_updated']} transaction(s)")
 
 
-def cmd_set_amortization(args, services):
+def cmd_set_amortization(args, db_manager, config):
     """Set amortization for a transaction.
 
     Args:
         args: Parsed command-line arguments with transaction_id and months
-        services: Services container with transactions service
+        db_manager: Database manager instance
+        config: Application configuration
     """
     from dateutil.relativedelta import relativedelta
+
+    transactions_repo = TransactionRepository(db_manager)
 
     transaction_id = args.transaction_id
     months = args.months
@@ -322,7 +339,7 @@ def cmd_set_amortization(args, services):
         sys.exit(1)
 
     # Look up transaction
-    transaction = services.transactions.find(transaction_id)
+    transaction = transactions_repo.find(transaction_id)
     if not transaction:
         logger.error(f"Transaction with ID '{transaction_id}' not found.")
         sys.exit(1)
@@ -339,7 +356,7 @@ def cmd_set_amortization(args, services):
     try:
         transaction.amortize_months = months
         transaction.amortize_end_date = amortize_end_date
-        success = services.transactions.update(
+        success = transactions_repo.update(
             transaction, ["amortize_months", "amortize_end_date"]
         )
 

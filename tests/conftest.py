@@ -5,7 +5,11 @@ import pytest
 from pathlib import Path
 
 from config import Config, get_migrations_dir
-from services.base import Services
+from repositories.accounts import AccountRepository
+from repositories.budgets import BudgetRepository
+from repositories.categories import CategoryRepository
+from repositories.data_imports import DataImportRepository
+from repositories.transactions import TransactionRepository
 from tests.helpers import run_migrations
 
 
@@ -102,15 +106,20 @@ def db_manager_with_schema(test_db):
 
 @pytest.fixture
 def services(test_config, db_manager_with_schema):
-    """Create a Services container with test database.
+    """Provide repository access and config for tests.
 
-    This fixture provides access to all services with a clean test database.
-
-    Args:
-        test_config: Test configuration fixture.
-        db_manager_with_schema: Database manager with schema set up.
-
-    Returns:
-        Services: Services container for testing.
+    This is a lightweight shim that gives tests access to repositories
+    and config via a simple namespace object.
     """
-    return Services(test_config, db_manager=db_manager_with_schema)
+
+    class _TestServices:
+        def __init__(self):
+            self.config = test_config
+            self.db_manager = db_manager_with_schema
+            self.accounts = AccountRepository(db_manager_with_schema)
+            self.transactions = TransactionRepository(db_manager_with_schema)
+            self.data_imports = DataImportRepository(db_manager_with_schema)
+            self.categories = CategoryRepository(db_manager_with_schema)
+            self.budgets = BudgetRepository(db_manager_with_schema)
+
+    return _TestServices()

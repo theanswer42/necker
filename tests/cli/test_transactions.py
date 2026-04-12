@@ -56,14 +56,14 @@ class TestCmdIngest:
             csv_file=str(tmp_path / "nonexistent.csv"), account_name="acct"
         )
         with pytest.raises(SystemExit) as exc:
-            cmd_ingest(args, services)
+            cmd_ingest(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_unknown_account_exits(self, services, tmp_path):
         csv_path = _make_bofa_csv(tmp_path, [])
         args = Namespace(csv_file=str(csv_path), account_name="no_such_account")
         with pytest.raises(SystemExit) as exc:
-            cmd_ingest(args, services)
+            cmd_ingest(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_invalid_account_type_exits(self, services, tmp_path):
@@ -73,7 +73,7 @@ class TestCmdIngest:
         )
         args = Namespace(csv_file=str(csv_path), account_name="acct")
         with pytest.raises(SystemExit) as exc:
-            cmd_ingest(args, services)
+            cmd_ingest(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_successful_ingest(self, services, tmp_path):
@@ -85,7 +85,7 @@ class TestCmdIngest:
             ],
         )
         args = Namespace(csv_file=str(csv_path), account_name="acct")
-        cmd_ingest(args, services)  # should not raise
+        cmd_ingest(args, services.db_manager, services.config)  # should not raise
         account = services.accounts.find_by_name("acct")
         txns = services.transactions.find_by_account(account.id)
         assert len(txns) == 1
@@ -94,7 +94,9 @@ class TestCmdIngest:
         services.accounts.create("acct", "bofa", "Test Account")
         csv_path = _make_bofa_csv(tmp_path, [])
         args = Namespace(csv_file=str(csv_path), account_name="acct")
-        cmd_ingest(args, services)  # should not raise or exit
+        cmd_ingest(
+            args, services.db_manager, services.config
+        )  # should not raise or exit
 
 
 class TestCmdSetCategory:
@@ -103,7 +105,7 @@ class TestCmdSetCategory:
     def test_unknown_transaction_exits(self, services):
         args = Namespace(transaction_id="nonexistent" * 4, category="Food")
         with pytest.raises(SystemExit) as exc:
-            cmd_set_category(args, services)
+            cmd_set_category(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_unknown_category_name_exits(self, services):
@@ -111,7 +113,7 @@ class TestCmdSetCategory:
         txn = _make_transaction(services, account)
         args = Namespace(transaction_id=txn.id, category="NoSuchCategory")
         with pytest.raises(SystemExit) as exc:
-            cmd_set_category(args, services)
+            cmd_set_category(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_set_category_by_name(self, services):
@@ -119,7 +121,7 @@ class TestCmdSetCategory:
         category = services.categories.create("Food", "Food expenses")
         txn = _make_transaction(services, account)
         args = Namespace(transaction_id=txn.id, category="Food")
-        cmd_set_category(args, services)
+        cmd_set_category(args, services.db_manager, services.config)
         updated = services.transactions.find(txn.id)
         assert updated.category_id == category.id
 
@@ -128,7 +130,7 @@ class TestCmdSetCategory:
         category = services.categories.create("Food", "Food expenses")
         txn = _make_transaction(services, account)
         args = Namespace(transaction_id=txn.id, category=str(category.id))
-        cmd_set_category(args, services)
+        cmd_set_category(args, services.db_manager, services.config)
         updated = services.transactions.find(txn.id)
         assert updated.category_id == category.id
 
@@ -150,31 +152,31 @@ class TestCmdExport:
     def test_start_date_without_end_date_exits(self, services, tmp_path):
         args = self._base_args(tmp_path / "out.csv", start_date="2024/01/01")
         with pytest.raises(SystemExit) as exc:
-            cmd_export(args, services)
+            cmd_export(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_end_date_without_start_date_exits(self, services, tmp_path):
         args = self._base_args(tmp_path / "out.csv", end_date="2024/01/31")
         with pytest.raises(SystemExit) as exc:
-            cmd_export(args, services)
+            cmd_export(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_invalid_month_format_exits(self, services, tmp_path):
         args = self._base_args(tmp_path / "out.csv", month="not-a-month")
         with pytest.raises(SystemExit) as exc:
-            cmd_export(args, services)
+            cmd_export(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_month_out_of_range_exits(self, services, tmp_path):
         args = self._base_args(tmp_path / "out.csv", month="2024/13")
         with pytest.raises(SystemExit) as exc:
-            cmd_export(args, services)
+            cmd_export(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_no_transactions_exits_0(self, services, tmp_path):
         args = self._base_args(tmp_path / "out.csv", month="2024/01")
         with pytest.raises(SystemExit) as exc:
-            cmd_export(args, services)
+            cmd_export(args, services.db_manager, services.config)
         assert exc.value.code == 0
 
     def test_export_by_month_writes_csv(self, services, tmp_path):
@@ -186,7 +188,7 @@ class TestCmdExport:
 
         out = tmp_path / "out.csv"
         args = self._base_args(out, month="2024/01")
-        cmd_export(args, services)
+        cmd_export(args, services.db_manager, services.config)
 
         assert out.exists()
         with open(out) as f:
@@ -203,7 +205,7 @@ class TestCmdExport:
 
         out = tmp_path / "out.csv"
         args = self._base_args(out, start_date="2024/01/01", end_date="2024/01/31")
-        cmd_export(args, services)
+        cmd_export(args, services.db_manager, services.config)
 
         assert out.exists()
         with open(out) as f:
@@ -214,7 +216,7 @@ class TestCmdExport:
         out = tmp_path / "out.csv"
         args = self._base_args(out, month="2024/01", account="no_such_account")
         with pytest.raises(SystemExit) as exc:
-            cmd_export(args, services)
+            cmd_export(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_export_csv_headers(self, services, tmp_path):
@@ -223,7 +225,7 @@ class TestCmdExport:
 
         out = tmp_path / "out.csv"
         args = self._base_args(out, month="2024/01")
-        cmd_export(args, services)
+        cmd_export(args, services.db_manager, services.config)
 
         with open(out) as f:
             reader = csv.DictReader(f)
@@ -254,26 +256,26 @@ class TestCmdSetAmortization:
     def test_zero_months_exits(self, services):
         args = Namespace(transaction_id="x" * 64, months=0)
         with pytest.raises(SystemExit) as exc:
-            cmd_set_amortization(args, services)
+            cmd_set_amortization(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_negative_months_exits(self, services):
         args = Namespace(transaction_id="x" * 64, months=-1)
         with pytest.raises(SystemExit) as exc:
-            cmd_set_amortization(args, services)
+            cmd_set_amortization(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_unknown_transaction_exits(self, services):
         args = Namespace(transaction_id="x" * 64, months=12)
         with pytest.raises(SystemExit) as exc:
-            cmd_set_amortization(args, services)
+            cmd_set_amortization(args, services.db_manager, services.config)
         assert exc.value.code == 1
 
     def test_sets_amortization_correctly(self, services):
         account = services.accounts.create("acct", "bofa", "Test")
         txn = _make_transaction(services, account, "Annual Sub", amount=12000)
         args = Namespace(transaction_id=txn.id, months=12)
-        cmd_set_amortization(args, services)
+        cmd_set_amortization(args, services.db_manager, services.config)
 
         updated = services.transactions.find(txn.id)
         assert updated.amortize_months == 12
@@ -285,7 +287,7 @@ class TestCmdSetAmortization:
         account = services.accounts.create("acct", "bofa", "Test")
         txn = _make_transaction(services, account, "One-time", amount=1000)
         args = Namespace(transaction_id=txn.id, months=1)
-        cmd_set_amortization(args, services)
+        cmd_set_amortization(args, services.db_manager, services.config)
 
         updated = services.transactions.find(txn.id)
         assert updated.amortize_months == 1
