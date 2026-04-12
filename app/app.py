@@ -1,9 +1,12 @@
 """Flask application factory."""
 
 from flask import Flask, render_template
+from flask_wtf.csrf import CSRFProtect
 
 from config import load_config
 from services.base import Services
+
+csrf = CSRFProtect()
 
 
 def create_app(config=None, services=None):
@@ -25,7 +28,11 @@ def create_app(config=None, services=None):
         services = Services(config)
 
     app.config["NECKER_CONFIG"] = config
+    app.config["SECRET_KEY"] = config.secret_key
+    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB upload limit
     app.services = services
+
+    csrf.init_app(app)
 
     # Register blueprints
     from app.api import api_bp
@@ -37,5 +44,17 @@ def create_app(config=None, services=None):
     @app.route("/")
     def index():
         return render_template("base.html")
+
+    @app.errorhandler(413)
+    def request_entity_too_large(e):
+        return (
+            render_template(
+                "fragments/import_form.html",
+                accounts=[],
+                error="File too large. Maximum upload size is 5 MB.",
+                selected_account_id=None,
+            ),
+            413,
+        )
 
     return app

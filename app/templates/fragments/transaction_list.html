@@ -7,6 +7,7 @@
     <strong>{{ month_label }}</strong>
     <a hx-get="/ui/transactions?month={{ next_month }}" hx-target="#content">{{ next_month }} &rarr;</a>
   </nav>
+  <p><button hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true">Import transactions</button></p>
 
   {% if transactions %}
   <table>

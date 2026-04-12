@@ -1,0 +1,65 @@
+<section>
+  <h2>Review Import{% if account %} — {{ account.name }}{% endif %}</h2>
+  {% if result %}
+  <p>
+    Imported {{ result.inserted }} transaction{{ 's' if result.inserted != 1 else '' }}
+    ({{ result.skipped }} duplicate{{ 's' if result.skipped != 1 else '' }} skipped,
+    {{ result.categorized }} auto-categorized).
+    Review and adjust categories and merchant names below, then click Save.
+  </p>
+  {% endif %}
+  <form hx-post="/ui/imports/{{ data_import_id }}/review" hx-target="#content">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Auto-category</th>
+          <th>Category</th>
+          <th>Merchant</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        {% set pending = edits.get(t.id, {}) %}
+        {% set pending_cat = pending.get('category_id', '') %}
+        {% set pending_merchant = pending.get('merchant_name', '') %}
+        <tr>
+          <td>{{ t.transaction_date.isoformat() }}</td>
+          <td>{{ t.description }}</td>
+          <td>${{ "%.2f"|format(t.amount / 100) }}</td>
+          <td>
+            {% if t.auto_category_id and t.auto_category_id in categories_map %}
+              <em>{{ categories_map[t.auto_category_id] }}</em>
+            {% endif %}
+          </td>
+          <td>
+            <select name="category_id_{{ t.id }}">
+              <option value="">-- None --</option>
+              {% for c in categories %}
+              <option value="{{ c.id }}"
+                {% if pending_cat and pending_cat == c.id|string %}selected
+                {% elif not pending_cat and t.auto_category_id == c.id %}selected{% endif %}>
+                {{ c.name }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if row_errors.get(t.id, {}).get('category') %}
+            <span style="color:red"> {{ row_errors[t.id]['category'] }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <input type="text" name="merchant_name_{{ t.id }}"
+              value="{{ pending_merchant if pending_merchant else (t.auto_merchant_name or '') }}">
+            {% if row_errors.get(t.id, {}).get('merchant') %}
+            <span style="color:red"> {{ row_errors[t.id]['merchant'] }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit">Save changes</button>
+  </form>
+</section>
