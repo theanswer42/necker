@@ -4,7 +4,7 @@ CREATE TABLE data_imports (
     account_id INTEGER NOT NULL,
     filename TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
 -- Create index for faster lookups by account
