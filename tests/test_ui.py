@@ -99,6 +99,104 @@ class TestAccountsUI:
         assert "<table>" in html
         assert "<th>" in html
 
+    def test_accounts_has_add_account_button(self, client):
+        html = client.get("/ui/accounts").data.decode()
+        assert "Add Account" in html
+        assert "/ui/accounts/new" in html
+
+
+# --- /ui/accounts/new and POST /ui/accounts ---
+
+
+class TestAccountCreateUI:
+    def test_account_new_returns_200(self, client):
+        resp = client.get("/ui/accounts/new")
+        assert resp.status_code == 200
+
+    def test_account_new_shows_form(self, client):
+        html = client.get("/ui/accounts/new").data.decode()
+        assert "<form" in html
+        assert 'name="name"' in html
+        assert 'name="account_type"' in html
+        assert 'name="description"' in html
+
+    def test_account_new_shows_available_types(self, client):
+        html = client.get("/ui/accounts/new").data.decode()
+        assert "bofa" in html
+        assert "chase" in html
+        assert "amex" in html
+
+    def test_account_create_success_returns_account_list(self, client):
+        resp = client.post(
+            "/ui/accounts",
+            data={
+                "name": "bofa_checking",
+                "account_type": "bofa",
+                "description": "BofA",
+            },
+        )
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert "bofa_checking" in html
+
+    def test_account_create_invalid_name_returns_400(self, client):
+        resp = client.post(
+            "/ui/accounts",
+            data={"name": "Bad Name", "account_type": "bofa", "description": "BofA"},
+        )
+        assert resp.status_code == 400
+
+    def test_account_create_invalid_name_shows_error(self, client):
+        resp = client.post(
+            "/ui/accounts",
+            data={"name": "Bad Name", "account_type": "bofa", "description": "BofA"},
+        )
+        html = resp.data.decode()
+        assert "Error" in html
+
+    def test_account_create_invalid_name_preserves_form_values(self, client):
+        resp = client.post(
+            "/ui/accounts",
+            data={"name": "Bad Name", "account_type": "bofa", "description": "My Desc"},
+        )
+        html = resp.data.decode()
+        assert "My Desc" in html
+
+    def test_account_create_invalid_type_returns_400(self, client):
+        resp = client.post(
+            "/ui/accounts",
+            data={
+                "name": "my_account",
+                "account_type": "unknown",
+                "description": "Desc",
+            },
+        )
+        assert resp.status_code == 400
+
+    def test_account_create_empty_description_returns_400(self, client):
+        resp = client.post(
+            "/ui/accounts",
+            data={"name": "my_account", "account_type": "bofa", "description": ""},
+        )
+        assert resp.status_code == 400
+
+    def test_account_create_duplicate_name_returns_400(self, client, svc):
+        svc.accounts.create("my_account", "bofa", "Existing")
+        resp = client.post(
+            "/ui/accounts",
+            data={"name": "my_account", "account_type": "chase", "description": "New"},
+        )
+        assert resp.status_code == 400
+
+    def test_account_create_persists_to_db(self, client, svc):
+        client.post(
+            "/ui/accounts",
+            data={"name": "new_account", "account_type": "amex", "description": "Amex"},
+        )
+        found = svc.accounts.find_by_name("new_account")
+        assert found is not None
+        assert found.account_type == "amex"
+
 
 # --- /ui/categories ---
 

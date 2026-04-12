@@ -1,0 +1,24 @@
+{% if error %}
+<p><strong>Error:</strong> {{ error }}</p>
+{% endif %}
+<section>
+  <h2>Add Account</h2>
+  <form hx-post="/ui/accounts" hx-target="#content">
+    <label for="name">Name</label>
+    <input type="text" name="name" id="name" placeholder="bofa_checking" required
+      value="{{ form_data.get('name', '') }}">
+    <label for="account_type">Type</label>
+    <select name="account_type" id="account_type" required>
+      <option value="">Select type...</option>
+      {% for t in available_types %}
+      <option value="{{ t }}"
+        {% if form_data.get('account_type') == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+    <label for="description">Description</label>
+    <input type="text" name="description" id="description"
+      placeholder="Bank of America Checking Account" required
+      value="{{ form_data.get('description', '') }}">
+    <button type="submit">Create Account</button>
+  </form>
+</section>
