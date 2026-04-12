@@ -1,5 +1,6 @@
 """API route definitions — read-only JSON endpoints."""
 
+import sqlite3
 from datetime import date
 
 from flask import jsonify, request, current_app
@@ -178,3 +179,102 @@ def get_transaction(transaction_id):
             }
         ), 404
     return jsonify(_transaction_to_dict(transaction))
+
+
+# --- Budgets ---
+
+
+def _budget_to_dict(b) -> dict:
+    return {
+        "id": b.id,
+        "category_id": b.category_id,
+        "period_type": b.period_type,
+        "amount": b.amount,
+        "category_name": b.category_name,
+    }
+
+
+VALID_PERIOD_TYPES = {"monthly", "yearly"}
+
+
+@api_bp.route("/budgets")
+def list_budgets():
+    budgets = current_app.services.budgets.find_all()
+    return jsonify([_budget_to_dict(b) for b in budgets])
+
+
+@api_bp.route("/budgets", methods=["POST"])
+def create_budget():
+    data = request.get_json(silent=True) or {}
+    category_id = data.get("category_id")
+    period_type = data.get("period_type")
+    amount = data.get("amount")
+
+    if category_id is None or not isinstance(category_id, int):
+        return jsonify(
+            {"error": "bad_request", "message": "category_id must be an integer"}
+        ), 400
+    if period_type not in VALID_PERIOD_TYPES:
+        return jsonify(
+            {
+                "error": "bad_request",
+                "message": "period_type must be 'monthly' or 'yearly'",
+            }
+        ), 400
+    if not isinstance(amount, int) or amount <= 0:
+        return jsonify(
+            {
+                "error": "bad_request",
+                "message": "amount must be a positive integer (cents)",
+            }
+        ), 400
+
+    category = current_app.services.categories.find(category_id)
+    if category is None:
+        return jsonify(
+            {"error": "bad_request", "message": f"Category {category_id} not found"}
+        ), 400
+
+    try:
+        budget = current_app.services.budgets.create(category_id, period_type, amount)
+    except sqlite3.IntegrityError:
+        return jsonify(
+            {
+                "error": "conflict",
+                "message": "A budget for this category and period already exists",
+            }
+        ), 400
+
+    return jsonify(_budget_to_dict(budget)), 201
+
+
+@api_bp.route("/budgets/<int:budget_id>", methods=["DELETE"])
+def delete_budget(budget_id):
+    deleted = current_app.services.budgets.delete(budget_id)
+    if not deleted:
+        return jsonify(
+            {"error": "not_found", "message": f"Budget {budget_id} not found"}
+        ), 404
+    return "", 204
+
+
+@api_bp.route("/budgets/<int:budget_id>", methods=["PATCH"])
+def update_budget(budget_id):
+    data = request.get_json(silent=True) or {}
+    amount = data.get("amount")
+
+    if not isinstance(amount, int) or amount <= 0:
+        return jsonify(
+            {
+                "error": "bad_request",
+                "message": "amount must be a positive integer (cents)",
+            }
+        ), 400
+
+    budget = current_app.services.budgets.update_amount(budget_id, amount)
+    if budget is None:
+        return jsonify(
+            {"error": "not_found", "message": f"Budget {budget_id} not found"}
+        ), 404
+
+    return jsonify(_budget_to_dict(budget))
