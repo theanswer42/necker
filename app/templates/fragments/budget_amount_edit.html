@@ -1,0 +1,5 @@
+<form hx-patch="/ui/budgets/{{ budget.id }}" hx-target="#budget-amount-{{ budget.id }}" hx-swap="outerHTML" style="display:inline">
+  <input type="number" name="amount" value="{{ '%.2f'|format(budget.amount / 100) }}" step="0.01" min="0.01" style="width:8em" required>
+  <button type="submit">Save</button>
+  <button type="button" hx-get="/ui/budgets/{{ budget.id }}/amount" hx-target="#budget-amount-{{ budget.id }}" hx-swap="outerHTML">Cancel</button>
+</form>

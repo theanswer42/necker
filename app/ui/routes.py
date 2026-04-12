@@ -1,5 +1,6 @@
 """UI route definitions — server-rendered HTML fragments for htmx."""
 
+import sqlite3
 import tempfile
 from datetime import date
 from pathlib import Path
@@ -323,3 +324,149 @@ def import_review(data_import_id):
         month_str=month_str,
         mode="review",
     )
+
+
+# --- Budgets ---
+
+
+@ui_bp.route("/budgets")
+def budgets():
+    all_budgets = current_app.services.budgets.find_all()
+    return render_template(
+        "fragments/budget_list.html", budgets=all_budgets, error=None
+    )
+
+
+@ui_bp.route("/budgets/new")
+def budget_new():
+    all_categories = current_app.services.categories.find_all()
+    return render_template(
+        "fragments/budget_form.html",
+        categories=all_categories,
+        error=None,
+        form_data={},
+    )
+
+
+@ui_bp.route("/budgets", methods=["POST"])
+def budget_create():
+    category_id_str = request.form.get("category_id", "").strip()
+    period_type = request.form.get("period_type", "").strip()
+    amount_str = request.form.get("amount", "").strip()
+    form_data = {
+        "category_id": category_id_str,
+        "period_type": period_type,
+        "amount": amount_str,
+    }
+    all_categories = current_app.services.categories.find_all()
+
+    try:
+        category_id = int(category_id_str)
+    except ValueError:
+        return (
+            render_template(
+                "fragments/budget_form.html",
+                categories=all_categories,
+                error="Please select a category.",
+                form_data=form_data,
+            ),
+            400,
+        )
+
+    if period_type not in ("monthly", "yearly"):
+        return (
+            render_template(
+                "fragments/budget_form.html",
+                categories=all_categories,
+                error="Period type must be 'monthly' or 'yearly'.",
+                form_data=form_data,
+            ),
+            400,
+        )
+
+    try:
+        amount_dollars = float(amount_str)
+        amount_cents = int(round(amount_dollars * 100))
+    except ValueError:
+        return (
+            render_template(
+                "fragments/budget_form.html",
+                categories=all_categories,
+                error="Amount must be a number.",
+                form_data=form_data,
+            ),
+            400,
+        )
+
+    if amount_cents <= 0:
+        return (
+            render_template(
+                "fragments/budget_form.html",
+                categories=all_categories,
+                error="Amount must be greater than zero.",
+                form_data=form_data,
+            ),
+            400,
+        )
+
+    try:
+        current_app.services.budgets.create(category_id, period_type, amount_cents)
+    except sqlite3.IntegrityError:
+        return (
+            render_template(
+                "fragments/budget_form.html",
+                categories=all_categories,
+                error="A budget for this category and period already exists.",
+                form_data=form_data,
+            ),
+            400,
+        )
+
+    all_budgets = current_app.services.budgets.find_all()
+    return render_template(
+        "fragments/budget_list.html", budgets=all_budgets, error=None
+    )
+
+
+@ui_bp.route("/budgets/<int:budget_id>", methods=["DELETE"])
+def budget_delete(budget_id):
+    current_app.services.budgets.delete(budget_id)
+    return "", 200
+
+
+@ui_bp.route("/budgets/<int:budget_id>/edit")
+def budget_edit(budget_id):
+    budget = current_app.services.budgets.find(budget_id)
+    if budget is None:
+        return "", 404
+    return render_template("fragments/budget_amount_edit.html", budget=budget)
+
+
+@ui_bp.route("/budgets/<int:budget_id>/amount")
+def budget_amount(budget_id):
+    budget = current_app.services.budgets.find(budget_id)
+    if budget is None:
+        return "", 404
+    return render_template("fragments/budget_amount_display.html", budget=budget)
+
+
+@ui_bp.route("/budgets/<int:budget_id>", methods=["PATCH"])
+def budget_update(budget_id):
+    amount_str = request.form.get("amount", "").strip()
+
+    try:
+        amount_dollars = float(amount_str)
+        amount_cents = int(round(amount_dollars * 100))
+    except ValueError:
+        budget = current_app.services.budgets.find(budget_id)
+        return render_template("fragments/budget_amount_edit.html", budget=budget), 400
+
+    if amount_cents <= 0:
+        budget = current_app.services.budgets.find(budget_id)
+        return render_template("fragments/budget_amount_edit.html", budget=budget), 400
+
+    budget = current_app.services.budgets.update_amount(budget_id, amount_cents)
+    if budget is None:
+        return "", 404
+
+    return render_template("fragments/budget_amount_display.html", budget=budget)

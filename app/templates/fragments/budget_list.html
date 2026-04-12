@@ -1,0 +1,38 @@
+<section>
+  <h2>Budgets</h2>
+  <p><button hx-get="/ui/budgets/new" hx-target="#budget-form" hx-swap="innerHTML">New Budget</button></p>
+  <div id="budget-form"></div>
+  {% if error %}
+  <p><strong>Error:</strong> {{ error }}</p>
+  {% endif %}
+  {% if budgets %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Category</th>
+        <th>Period</th>
+        <th>Amount</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for budget in budgets %}
+      <tr id="budget-row-{{ budget.id }}">
+        <td>{{ budget.id }}</td>
+        <td>{{ budget.category_name }}</td>
+        <td>{{ budget.period_type }}</td>
+        <td id="budget-amount-{{ budget.id }}">${{ "%.2f"|format(budget.amount / 100) }}</td>
+        <td>
+          <button hx-get="/ui/budgets/{{ budget.id }}/edit" hx-target="#budget-amount-{{ budget.id }}" hx-swap="innerHTML">Edit</button>
+          <button hx-delete="/ui/budgets/{{ budget.id }}" hx-target="#budget-row-{{ budget.id }}" hx-swap="outerHTML"
+            hx-confirm="Delete this budget?">Delete</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No budgets found.</p>
+  {% endif %}
+</section>

@@ -31,8 +31,10 @@ class Services:
         from repositories.transactions import TransactionRepository
         from repositories.data_imports import DataImportRepository
         from repositories.categories import CategoryRepository
+        from repositories.budgets import BudgetRepository
 
         self.accounts = AccountRepository(self.db_manager)
         self.transactions = TransactionRepository(self.db_manager)
         self.data_imports = DataImportRepository(self.db_manager)
         self.categories = CategoryRepository(self.db_manager)
+        self.budgets = BudgetRepository(self.db_manager)

@@ -20,7 +20,7 @@ Examples:
 
 import sys
 import argparse
-from cli import accounts, transactions, migrate, categories, server
+from cli import accounts, transactions, migrate, categories, server, budgets
 from config import load_config
 from services.base import Services
 from db.manager import DatabaseManager
@@ -47,6 +47,7 @@ def main():
     accounts.setup_parser(subparsers)
     transactions.setup_parser(subparsers)
     categories.setup_parser(subparsers)
+    budgets.setup_parser(subparsers)
     migrate.setup_parser(subparsers)
     server.setup_parser(subparsers)
 
@@ -67,7 +68,13 @@ def main():
 
             # Commands that use services: accounts, transactions, categories, serve
             # Commands that use db_manager directly: migrate
-            if args.command in ("accounts", "transactions", "categories", "serve"):
+            if args.command in (
+                "accounts",
+                "transactions",
+                "categories",
+                "budgets",
+                "serve",
+            ):
                 args.func(args, services)
             elif args.command == "migrate":
                 # Migrate commands need db_manager for raw database operations
