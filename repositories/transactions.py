@@ -281,6 +281,29 @@ class TransactionRepository:
 
             return [self._row_to_transaction(row) for row in rows]
 
+    def find_by_data_import_id(self, data_import_id: int) -> List[Transaction]:
+        """Return all transactions belonging to a given data import.
+
+        Args:
+            data_import_id: The data import ID to filter by.
+
+        Returns:
+            List of Transaction objects ordered by transaction_date ascending, then id.
+            Empty list if no transactions exist for this data import.
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                f"""
+                SELECT {_TRANSACTION_SELECT_FIELDS}
+                FROM transactions
+                WHERE data_import_id = ?
+                ORDER BY transaction_date ASC, id
+                """,
+                (data_import_id,),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_transaction(row) for row in rows]
+
     def find_historical_for_categorization(
         self, account_id: int, limit: int = 200
     ) -> List[Transaction]:

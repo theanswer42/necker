@@ -1,0 +1,29 @@
+<section>
+  <h2>Import Complete</h2>
+  {% if mode == 'review' %}
+  <p>Updated {{ result.updated }} transaction{{ 's' if result.updated != 1 else '' }}.</p>
+  {% else %}
+  {% if result.parsed == 0 %}
+  <p>No transactions found in the CSV file.</p>
+  {% elif result.inserted == 0 %}
+  <p>
+    {{ result.parsed }} transaction{{ 's' if result.parsed != 1 else '' }} parsed —
+    all were duplicates and skipped.
+  </p>
+  {% else %}
+  <p>
+    Imported {{ result.inserted }} transaction{{ 's' if result.inserted != 1 else '' }}
+    ({{ result.skipped }} duplicate{{ 's' if result.skipped != 1 else '' }} skipped,
+    {{ result.categorized }} auto-categorized).
+  </p>
+  {% endif %}
+  {% endif %}
+  {% if transactions_url %}
+  <p>
+    <a hx-get="{{ transactions_url }}" hx-target="#content" hx-push-url="true">
+      View {{ month_str }} transactions &rarr;
+    </a>
+  </p>
+  {% endif %}
+  <p><a hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true">Import more transactions</a></p>
+</section>

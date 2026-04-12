@@ -3,8 +3,9 @@
 Reads configuration from ~/.config/necker.toml and creates default config if needed.
 """
 
+import secrets
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import tomllib
 import tomli_w
 
@@ -26,6 +27,8 @@ class Config:
     llm_provider: str  # "openai", "ollama", etc.
     llm_openai_api_key: str
     llm_openai_model: str
+    # Web settings
+    secret_key: str = field(default_factory=lambda: secrets.token_hex(32))
 
     @property
     def db_path(self) -> Path:
@@ -109,7 +112,10 @@ def load_config() -> Config:
     llm_openai_api_key = openai_config.get("api_key", "")
     llm_openai_model = openai_config.get("model", "gpt-4o-mini")
 
-    return Config(
+    web_config = data.get("web", {})
+    secret_key = web_config.get("secret_key", "")
+
+    config = Config(
         base_dir=base_dir,
         db_data_dir=db_data_dir,
         db_filename=db_filename,
@@ -122,7 +128,14 @@ def load_config() -> Config:
         llm_provider=llm_provider,
         llm_openai_api_key=llm_openai_api_key,
         llm_openai_model=llm_openai_model,
+        secret_key=secret_key if secret_key else secrets.token_hex(32),
     )
+
+    # Persist generated secret_key so it survives restarts
+    if not secret_key:
+        _write_config(config)
+
+    return config
 
 
 def _write_config(config: Config) -> None:
@@ -159,6 +172,9 @@ def _write_config(config: Config) -> None:
                 "api_key": config.llm_openai_api_key,
                 "model": config.llm_openai_model,
             },
+        },
+        "web": {
+            "secret_key": config.secret_key,
         },
     }
 
