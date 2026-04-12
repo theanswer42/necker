@@ -78,3 +78,22 @@ The project follows a layered architecture:
 - **interface layer** (`cli/`): input validation and output only — delegates all logic to services
 
 The `Services` class in `services/base.py` is the central dependency-injection container. It wires together the database manager and all repositories, and is passed through to service functions and CLI commands.
+
+## Database & Foreign Key Conventions
+
+`PRAGMA foreign_keys = ON` is set on every connection (`db/manager.py`) and in the test fixture (`tests/conftest.py`). Foreign keys are enforced at runtime — declarations in migrations are not just documentation.
+
+### ON DELETE policy
+
+Every `*_id` column that references another table must have an explicit, intentional `ON DELETE` behavior. Use this decision framework:
+
+- **`NO ACTION`** (the default — omit the `ON DELETE` clause) for **structural/ownership references** where the parent should not be deletable while children exist. This is the safe default. Examples: `transactions.account_id`, `transactions.data_import_id`, `categories.parent_id`.
+- **`SET NULL`** for **loose tag/classification references** where the parent is metadata that can be removed without destroying the referencing row. The column must be nullable. Examples: `transactions.category_id`, `transactions.auto_category_id`.
+- **`CASCADE`** should be used sparingly and only when deleting the parent truly means "delete everything underneath it." Before using CASCADE, verify the full cascade chain — in SQLite, cascades can chain through multiple tables, and a `NO ACTION` FK further down the chain may be bypassed if an intermediate cascade deletes the rows first (SQLite checks `NO ACTION` at end-of-statement, after cascades have propagated). If in doubt, use `NO ACTION` and let application code handle the teardown explicitly.
+
+### When adding a new table or FK column
+
+1. Always declare the `FOREIGN KEY` constraint in the `CREATE TABLE` statement (or inline on the column for self-referential FKs like `parent_id`).
+2. Choose an `ON DELETE` action using the policy above. Do not rely on the default accidentally — make it a conscious choice.
+3. Add an index on the FK column (SQLite does not auto-index foreign keys).
+4. Write a test that verifies the FK is enforced (insert with a bogus ID → `IntegrityError`) and that the `ON DELETE` behavior is correct.
