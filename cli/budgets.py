@@ -2,6 +2,8 @@
 
 import sys
 from logger import get_logger
+from repositories.budgets import BudgetRepository
+from repositories.categories import CategoryRepository
 
 logger = get_logger()
 
@@ -12,8 +14,8 @@ def _format_amount(cents: int) -> str:
     return f"${cents / 100:.2f}"
 
 
-def cmd_list(args, services):
-    budgets = services.budgets.find_all()
+def cmd_list(args, db_manager, config):
+    budgets = BudgetRepository(db_manager).find_all()
 
     if not budgets:
         logger.info("No budgets found.")
@@ -30,12 +32,15 @@ def cmd_list(args, services):
     logger.info(f"\nTotal budgets: {len(budgets)}")
 
 
-def cmd_create(args, services):
+def cmd_create(args, db_manager, config):
+    categories_repo = CategoryRepository(db_manager)
+    budgets_repo = BudgetRepository(db_manager)
+
     print("\nCreate New Budget")
     print("=" * 80)
 
     # Pick category
-    all_categories = services.categories.find_all()
+    all_categories = categories_repo.find_all()
     if not all_categories:
         logger.error("No categories found. Create a category first.")
         sys.exit(1)
@@ -51,7 +56,7 @@ def cmd_create(args, services):
         logger.error("Category ID must be a number.")
         sys.exit(1)
 
-    category = services.categories.find(category_id)
+    category = categories_repo.find(category_id)
     if not category:
         logger.error(f"Category with ID {category_id} not found.")
         sys.exit(1)
@@ -78,7 +83,7 @@ def cmd_create(args, services):
         sys.exit(1)
 
     try:
-        budget = services.budgets.create(category_id, period_type, amount_cents)
+        budget = budgets_repo.create(category_id, period_type, amount_cents)
         logger.info(f"\n✓ Budget created successfully with ID: {budget.id}")
         logger.info(f"  Category: {budget.category_name}")
         logger.info(f"  Period: {budget.period_type}")
@@ -88,10 +93,11 @@ def cmd_create(args, services):
         sys.exit(1)
 
 
-def cmd_delete(args, services):
+def cmd_delete(args, db_manager, config):
+    budgets_repo = BudgetRepository(db_manager)
     budget_id = args.budget_id
 
-    budget = services.budgets.find(budget_id)
+    budget = budgets_repo.find(budget_id)
     if not budget:
         logger.error(f"Budget with ID {budget_id} not found.")
         sys.exit(1)
@@ -111,17 +117,18 @@ def cmd_delete(args, services):
         logger.info("Deletion cancelled.")
         return
 
-    if services.budgets.delete(budget_id):
+    if budgets_repo.delete(budget_id):
         logger.info("✓ Budget deleted successfully.")
     else:
         logger.error("Failed to delete budget.")
         sys.exit(1)
 
 
-def cmd_modify(args, services):
+def cmd_modify(args, db_manager, config):
+    budgets_repo = BudgetRepository(db_manager)
     budget_id = args.budget_id
 
-    budget = services.budgets.find(budget_id)
+    budget = budgets_repo.find(budget_id)
     if not budget:
         logger.error(f"Budget with ID {budget_id} not found.")
         sys.exit(1)
@@ -137,7 +144,7 @@ def cmd_modify(args, services):
         logger.error("Amount must be greater than zero.")
         sys.exit(1)
 
-    updated = services.budgets.update_amount(budget_id, amount_cents)
+    updated = budgets_repo.update_amount(budget_id, amount_cents)
     if not updated:
         logger.error("Failed to update budget.")
         sys.exit(1)

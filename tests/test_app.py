@@ -7,10 +7,7 @@ from app.app import create_app
 @pytest.fixture
 def app(test_config, db_manager_with_schema):
     """Create a Flask test application."""
-    from services.base import Services
-
-    svc = Services(test_config, db_manager=db_manager_with_schema)
-    flask_app = create_app(config=test_config, services=svc)
+    flask_app = create_app(config=test_config, db_manager=db_manager_with_schema)
     flask_app.config["TESTING"] = True
     return flask_app
 
@@ -39,9 +36,9 @@ def test_root_includes_htmx(client):
     assert "htmx" in html
 
 
-def test_services_attached_to_app(app):
-    assert hasattr(app, "services")
-    assert app.services is not None
+def test_db_manager_attached_to_app(app):
+    assert hasattr(app, "db_manager")
+    assert app.db_manager is not None
 
 
 def test_api_blueprint_registered(app):

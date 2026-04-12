@@ -4,33 +4,33 @@ from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
 
 from config import load_config
-from services.base import Services
+from db.manager import DatabaseManager
 
 csrf = CSRFProtect()
 
 
-def create_app(config=None, services=None):
+def create_app(config=None, db_manager=None):
     """Create and configure the Flask application.
 
     Args:
         config: Config object. If None, loads from the default config file.
-        services: Services container. If None, creates one from config.
+        db_manager: Database manager. If None, creates one from config.
 
     Returns:
         Configured Flask application instance.
     """
     app = Flask(__name__)
 
-    # Initialize config and services
+    # Initialize config and db_manager
     if config is None:
         config = load_config()
-    if services is None:
-        services = Services(config)
+    if db_manager is None:
+        db_manager = DatabaseManager(config)
 
     app.config["NECKER_CONFIG"] = config
     app.config["SECRET_KEY"] = config.secret_key
     app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB upload limit
-    app.services = services
+    app.db_manager = db_manager
 
     csrf.init_app(app)
 

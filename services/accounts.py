@@ -3,40 +3,46 @@
 import re
 
 from ingestion import get_available_modules
+from repositories.accounts import AccountRepository
 
 
-def create_account(services, name: str, account_type: str, description: str):
-    """Create a new account with validation.
+class AccountService:
+    """Business logic for account operations."""
 
-    Args:
-        services: Services DI container.
-        name: Account name (must match ^[a-z_]+$).
-        account_type: Ingestion module name (must be in get_available_modules()).
-        description: Human-readable description (must be non-empty after strip).
+    def __init__(self, db_manager):
+        self.accounts = AccountRepository(db_manager)
 
-    Returns:
-        Account: The newly created account.
+    def create_account(self, name: str, account_type: str, description: str):
+        """Create a new account with validation.
 
-    Raises:
-        ValueError: If any validation fails or name already exists.
-    """
-    if not re.fullmatch(r"[a-z_]+", name):
-        raise ValueError(
-            f"Account name '{name}' is invalid. "
-            "Only lowercase letters and underscores are allowed."
-        )
+        Args:
+            name: Account name (must match ^[a-z_]+$).
+            account_type: Ingestion module name (must be in get_available_modules()).
+            description: Human-readable description (must be non-empty after strip).
 
-    available = get_available_modules()
-    if account_type not in available:
-        raise ValueError(
-            f"Invalid account type '{account_type}'. "
-            f"Must be one of: {', '.join(available)}"
-        )
+        Returns:
+            Account: The newly created account.
 
-    if not description.strip():
-        raise ValueError("Description cannot be empty.")
+        Raises:
+            ValueError: If any validation fails or name already exists.
+        """
+        if not re.fullmatch(r"[a-z_]+", name):
+            raise ValueError(
+                f"Account name '{name}' is invalid. "
+                "Only lowercase letters and underscores are allowed."
+            )
 
-    if services.accounts.find_by_name(name) is not None:
-        raise ValueError(f"Account name '{name}' already exists.")
+        available = get_available_modules()
+        if account_type not in available:
+            raise ValueError(
+                f"Invalid account type '{account_type}'. "
+                f"Must be one of: {', '.join(available)}"
+            )
 
-    return services.accounts.create(name, account_type, description)
+        if not description.strip():
+            raise ValueError("Description cannot be empty.")
+
+        if self.accounts.find_by_name(name) is not None:
+            raise ValueError(f"Account name '{name}' already exists.")
+
+        return self.accounts.create(name, account_type, description)

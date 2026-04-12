@@ -22,7 +22,6 @@ import sys
 import argparse
 from cli import accounts, transactions, migrate, categories, server, budgets
 from config import load_config
-from services.base import Services
 from db.manager import DatabaseManager
 from logger import setup_logging
 
@@ -63,11 +62,9 @@ def main():
             # Set up logging
             setup_logging(config)
 
-            # Create services container for dependency injection
-            services = Services(config)
+            # Create database manager
+            db_manager = DatabaseManager(config)
 
-            # Commands that use services: accounts, transactions, categories, serve
-            # Commands that use db_manager directly: migrate
             if args.command in (
                 "accounts",
                 "transactions",
@@ -75,10 +72,9 @@ def main():
                 "budgets",
                 "serve",
             ):
-                args.func(args, services)
+                args.func(args, db_manager, config)
             elif args.command == "migrate":
-                # Migrate commands need db_manager for raw database operations
-                db_manager = DatabaseManager(config)
+                # Migrate commands need db_manager only
                 args.func(args, db_manager)
             else:
                 args.func(args)

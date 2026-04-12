@@ -6,7 +6,11 @@ from datetime import date
 from flask import jsonify, request, current_app
 
 from app.api import api_bp
-from services import analysis
+from repositories.accounts import AccountRepository
+from repositories.budgets import BudgetRepository
+from repositories.categories import CategoryRepository
+from repositories.transactions import TransactionRepository
+from services.analysis import AnalysisService
 
 
 def _transaction_to_dict(t) -> dict:
@@ -67,13 +71,13 @@ def _parse_month(value: str, param_name: str):
 
 @api_bp.route("/accounts")
 def list_accounts():
-    accounts = current_app.services.accounts.find_all()
+    accounts = AccountRepository(current_app.db_manager).find_all()
     return jsonify([a.to_dict() for a in accounts])
 
 
 @api_bp.route("/accounts/<int:account_id>")
 def get_account(account_id):
-    account = current_app.services.accounts.find(account_id)
+    account = AccountRepository(current_app.db_manager).find(account_id)
     if account is None:
         return jsonify(
             {"error": "not_found", "message": f"Account {account_id} not found"}
@@ -86,7 +90,7 @@ def get_account(account_id):
 
 @api_bp.route("/categories")
 def list_categories():
-    categories = current_app.services.categories.find_all()
+    categories = CategoryRepository(current_app.db_manager).find_all()
     return jsonify([_category_to_dict(c) for c in categories])
 
 
@@ -125,7 +129,9 @@ def get_transactions_summary():
             {"error": "bad_request", "message": "'end' must not be before 'start'"}
         ), 400
 
-    summary = analysis.get_period_summary(current_app.services, start_date, end_date)
+    summary = AnalysisService(current_app.db_manager).get_period_summary(
+        start_date, end_date
+    )
 
     # Serialize: expenses_by_category keys are ints; convert to str for JSON compatibility
     def _serialize_basis(basis_data):
@@ -162,15 +168,15 @@ def list_transactions():
         return err
     year, month = month_parsed
 
-    transactions = current_app.services.transactions.get_transactions_by_month(
-        year, month
-    )
+    transactions = TransactionRepository(
+        current_app.db_manager
+    ).get_transactions_by_month(year, month)
     return jsonify([_transaction_to_dict(t) for t in transactions])
 
 
 @api_bp.route("/transactions/<transaction_id>")
 def get_transaction(transaction_id):
-    transaction = current_app.services.transactions.find(transaction_id)
+    transaction = TransactionRepository(current_app.db_manager).find(transaction_id)
     if transaction is None:
         return jsonify(
             {
@@ -199,7 +205,7 @@ VALID_PERIOD_TYPES = {"monthly", "yearly"}
 
 @api_bp.route("/budgets")
 def list_budgets():
-    budgets = current_app.services.budgets.find_all()
+    budgets = BudgetRepository(current_app.db_manager).find_all()
     return jsonify([_budget_to_dict(b) for b in budgets])
 
 
@@ -229,14 +235,16 @@ def create_budget():
             }
         ), 400
 
-    category = current_app.services.categories.find(category_id)
+    category = CategoryRepository(current_app.db_manager).find(category_id)
     if category is None:
         return jsonify(
             {"error": "bad_request", "message": f"Category {category_id} not found"}
         ), 400
 
     try:
-        budget = current_app.services.budgets.create(category_id, period_type, amount)
+        budget = BudgetRepository(current_app.db_manager).create(
+            category_id, period_type, amount
+        )
     except sqlite3.IntegrityError:
         return jsonify(
             {
@@ -250,7 +258,7 @@ def create_budget():
 
 @api_bp.route("/budgets/<int:budget_id>", methods=["DELETE"])
 def delete_budget(budget_id):
-    deleted = current_app.services.budgets.delete(budget_id)
+    deleted = BudgetRepository(current_app.db_manager).delete(budget_id)
     if not deleted:
         return jsonify(
             {"error": "not_found", "message": f"Budget {budget_id} not found"}
@@ -271,7 +279,7 @@ def update_budget(budget_id):
             }
         ), 400
 
-    budget = current_app.services.budgets.update_amount(budget_id, amount)
+    budget = BudgetRepository(current_app.db_manager).update_amount(budget_id, amount)
     if budget is None:
         return jsonify(
             {"error": "not_found", "message": f"Budget {budget_id} not found"}
