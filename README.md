@@ -202,6 +202,16 @@ uv run python -m cli migrate apply
 uv run python -m cli migrate status
 ```
 
+### Database Backup
+
+```bash
+# Write a consistent snapshot of the configured database to a new file
+uv run python -m cli backup /path/to/backup.db
+```
+
+The output path must not already exist. Uses SQLite's online backup API,
+so it's safe to run while the application is writing.
+
 ## Development
 
 ### Code Formatting

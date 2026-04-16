@@ -9,6 +9,7 @@ Commands:
     accounts     Manage accounts
     transactions Import and manage transactions
     migrate      Database migrations
+    backup       Back up the database
 
 Examples:
     python -m cli accounts list
@@ -16,11 +17,12 @@ Examples:
     python -m cli transactions ingest file.csv --account-name bofa
     python -m cli migrate status
     python -m cli migrate apply
+    python -m cli backup /path/to/backup.db
 """
 
 import sys
 import argparse
-from cli import accounts, transactions, migrate, categories, server, budgets
+from cli import accounts, transactions, migrate, categories, server, budgets, backup
 from config import load_config
 from db.manager import DatabaseManager
 from logger import setup_logging
@@ -48,6 +50,7 @@ def main():
     categories.setup_parser(subparsers)
     budgets.setup_parser(subparsers)
     migrate.setup_parser(subparsers)
+    backup.setup_parser(subparsers)
     server.setup_parser(subparsers)
 
     # Parse arguments and execute
@@ -73,8 +76,8 @@ def main():
                 "serve",
             ):
                 args.func(args, db_manager, config)
-            elif args.command == "migrate":
-                # Migrate commands need db_manager only
+            elif args.command in ("migrate", "backup"):
+                # These commands need db_manager only
                 args.func(args, db_manager)
             else:
                 args.func(args)
