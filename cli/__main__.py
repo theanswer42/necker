@@ -8,6 +8,7 @@ Usage:
 Commands:
     accounts     Manage accounts
     transactions Import and manage transactions
+    reports      Run analytical reports
     migrate      Database migrations
     backup       Back up the database
 
@@ -15,6 +16,7 @@ Examples:
     python -m cli accounts list
     python -m cli accounts create
     python -m cli transactions ingest file.csv --account-name bofa
+    python -m cli reports spending-summary --month 2024/01 --basis cash
     python -m cli migrate status
     python -m cli migrate apply
     python -m cli backup /path/to/backup.db
@@ -22,7 +24,16 @@ Examples:
 
 import sys
 import argparse
-from cli import accounts, transactions, migrate, categories, server, budgets, backup
+from cli import (
+    accounts,
+    transactions,
+    migrate,
+    categories,
+    server,
+    budgets,
+    backup,
+    reports,
+)
 from config import load_config
 from db.manager import DatabaseManager
 from logger import setup_logging
@@ -49,6 +60,7 @@ def main():
     transactions.setup_parser(subparsers)
     categories.setup_parser(subparsers)
     budgets.setup_parser(subparsers)
+    reports.setup_parser(subparsers)
     migrate.setup_parser(subparsers)
     backup.setup_parser(subparsers)
     server.setup_parser(subparsers)
@@ -73,6 +85,7 @@ def main():
                 "transactions",
                 "categories",
                 "budgets",
+                "reports",
                 "serve",
             ):
                 args.func(args, db_manager, config)

@@ -1,0 +1,54 @@
+{% if error %}
+<p><strong>Error:</strong> {{ error }}</p>
+{% else %}
+<section>
+  <nav>
+    <a hx-get="/ui/reports/spending-summary?month={{ prev_month }}&basis={{ basis }}" hx-target="#content">&larr; {{ prev_month }}</a>
+    <strong>Spending Summary — {{ month_label }} ({{ basis }} basis)</strong>
+    <a hx-get="/ui/reports/spending-summary?month={{ next_month }}&basis={{ basis }}" hx-target="#content">{{ next_month }} &rarr;</a>
+  </nav>
+
+  <p>
+    {% if basis == "cash" %}
+      <a hx-get="/ui/reports/spending-summary?month={{ month_label }}&basis=accrual" hx-target="#content">Switch to accrual basis</a>
+    {% else %}
+      <a hx-get="/ui/reports/spending-summary?month={{ month_label }}&basis=cash" hx-target="#content">Switch to cash basis</a>
+    {% endif %}
+    &middot;
+    <a hx-get="/ui/reports/transactions?month={{ month_label }}&basis={{ basis }}" hx-target="#content">View transactions</a>
+  </p>
+
+  <table>
+    <tbody>
+      <tr><th>Income</th><td>${{ "%.2f"|format(summary.income_total / 100) }}</td></tr>
+      <tr><th>Expenses</th><td>${{ "%.2f"|format(summary.expense_total / 100) }}</td></tr>
+      <tr><th>Net</th><td>${{ "%.2f"|format(summary.net / 100) }}</td></tr>
+    </tbody>
+  </table>
+
+  {% if summary.expenses_by_category %}
+  <h3>Expenses by Category</h3>
+  <table>
+    <thead>
+      <tr><th>Category</th><th>Amount</th></tr>
+    </thead>
+    <tbody>
+      {% for cat_id, amount in summary.expenses_by_category.items()|sort(attribute=1, reverse=True) %}
+      <tr>
+        <td>
+          {% if cat_id and cat_id in categories %}
+            {{ categories[cat_id] }}
+          {% else %}
+            (uncategorized)
+          {% endif %}
+        </td>
+        <td>${{ "%.2f"|format(amount / 100) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No expenses for {{ month_label }} on {{ basis }} basis.</p>
+  {% endif %}
+</section>
+{% endif %}

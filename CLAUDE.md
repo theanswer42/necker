@@ -51,9 +51,11 @@ uv sync --group dev
 - `llm/` contains code and prompts to communicate with LLMs
 - `repositories/` contains repository classes — pure DB operations
   (SQL queries and row-to-object mapping) for each model
-- `services/` contains the `Services` dependency-injection container
-  that exposes repositories, plus business logic modules (`analysis.py`,
+- `services/` contains business logic modules (e.g. `accounts.py`,
   `categorization.py`, `ingestion.py`)
+- `reports/` contains typed analytical computations over raw data. Each
+  report is a class with a `run()` method that accepts simple typed
+  inputs and returns a typed dataclass defined in `models/reports.py`.
 
 ## Pre-commit Checks
 
@@ -74,10 +76,11 @@ If `ruff check` reports errors, fix them before committing. Do not skip this ste
 The project follows a layered architecture:
 
 - **repositories layer** (`repositories/`): pure DB operations — SQL queries and row-to-object mapping, no business logic
-- **services layer** (`services/`): business logic — ingestion orchestration, analysis, auto-categorization; also hosts the `Services` DI container
-- **interface layer** (`cli/`): input validation and output only — delegates all logic to services
+- **services layer** (`services/`): business logic — ingestion orchestration, auto-categorization, account management
+- **reports layer** (`reports/`): typed analytical computations over raw data. Each report is a class with a `run()` method that accepts simple typed inputs and returns a typed dataclass (defined in `models/reports.py`). Reports may compose by calling other reports. Reports are consumed by the CLI, web UI, and API layers — they should not contain presentation logic.
+- **interface layer** (`cli/`, `app/`): input validation and output only — delegates all logic to services and reports
 
-The `Services` class in `services/base.py` is the central dependency-injection container. It wires together the database manager and all repositories, and is passed through to service functions and CLI commands.
+Services and reports are instantiated with a `db_manager` directly; there is no central DI container.
 
 ## Database & Foreign Key Conventions
 

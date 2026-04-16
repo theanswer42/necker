@@ -12,6 +12,9 @@ from repositories.accounts import AccountRepository
 from repositories.budgets import BudgetRepository
 from repositories.categories import CategoryRepository
 from repositories.transactions import TransactionRepository
+from reports.accrual_spending_summary import AccrualSpendingSummaryReport
+from reports.cash_spending_summary import CashSpendingSummaryReport
+from reports.month_transactions import MonthTransactionsReport
 
 
 def _parse_month(value: str):
@@ -488,3 +491,110 @@ def budget_update(budget_id):
         return "", 404
 
     return render_template("fragments/budget_amount_display.html", budget=budget)
+
+
+# --- Reports ---
+
+
+VALID_BASES = ("cash", "accrual")
+
+
+def _report_request_params():
+    """Parse ?month=YYYY/MM&basis=cash|accrual. Defaults to current month + cash.
+
+    Returns (year, month, basis, error_message). error_message is None on success.
+    """
+    month_raw = request.args.get("month")
+    basis = request.args.get("basis", "cash")
+
+    if basis not in VALID_BASES:
+        return None, None, basis, f"basis must be one of: {', '.join(VALID_BASES)}"
+
+    if month_raw:
+        try:
+            year, month = _parse_month(month_raw)
+        except (ValueError, AttributeError):
+            return (
+                None,
+                None,
+                basis,
+                f"Invalid month format '{month_raw}'. Use YYYY/MM.",
+            )
+    else:
+        today = date.today()
+        year, month = today.year, today.month
+
+    return year, month, basis, None
+
+
+@ui_bp.route("/reports/transactions")
+def report_transactions():
+    year, month, basis, error = _report_request_params()
+    if error:
+        return render_template(
+            "fragments/report_transactions.html",
+            error=error,
+            report=None,
+            categories={},
+            month_label=None,
+            basis=basis,
+            prev_month=None,
+            next_month=None,
+        ), 400
+
+    report = MonthTransactionsReport(current_app.db_manager).run(year, month, basis)
+
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
+    categories = {c.id: c.name for c in all_categories}
+
+    month_label = f"{year:04d}/{month:02d}"
+    prev_year, prev_month, next_year, next_month = _adjacent_months(year, month)
+
+    return render_template(
+        "fragments/report_transactions.html",
+        error=None,
+        report=report,
+        categories=categories,
+        month_label=month_label,
+        basis=basis,
+        prev_month=f"{prev_year:04d}/{prev_month:02d}",
+        next_month=f"{next_year:04d}/{next_month:02d}",
+    )
+
+
+@ui_bp.route("/reports/spending-summary")
+def report_spending_summary():
+    year, month, basis, error = _report_request_params()
+    if error:
+        return render_template(
+            "fragments/report_spending_summary.html",
+            error=error,
+            summary=None,
+            categories={},
+            month_label=None,
+            basis=basis,
+            prev_month=None,
+            next_month=None,
+        ), 400
+
+    if basis == "cash":
+        summary = CashSpendingSummaryReport(current_app.db_manager).run(year, month)
+    else:
+        summary = AccrualSpendingSummaryReport(current_app.db_manager).run(year, month)
+
+    all_categories = CategoryRepository(current_app.db_manager).find_all()
+    categories = {c.id: c.name for c in all_categories}
+
+    month_label = f"{year:04d}/{month:02d}"
+    prev_year, prev_month, next_year, next_month = _adjacent_months(year, month)
+
+    return render_template(
+        "fragments/report_spending_summary.html",
+        error=None,
+        summary=summary,
+        categories=categories,
+        month_label=month_label,
+        basis=basis,
+        prev_month=f"{prev_year:04d}/{prev_month:02d}",
+        next_month=f"{next_year:04d}/{next_month:02d}",
+    )

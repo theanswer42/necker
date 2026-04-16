@@ -1,7 +1,6 @@
 """API route definitions — read-only JSON endpoints."""
 
 import sqlite3
-from datetime import date
 
 from flask import jsonify, request, current_app
 
@@ -10,7 +9,8 @@ from repositories.accounts import AccountRepository
 from repositories.budgets import BudgetRepository
 from repositories.categories import CategoryRepository
 from repositories.transactions import TransactionRepository
-from services.analysis import AnalysisService
+from reports.accrual_spending_summary import AccrualSpendingSummaryReport
+from reports.cash_spending_summary import CashSpendingSummaryReport
 
 
 def _transaction_to_dict(t) -> dict:
@@ -121,38 +121,43 @@ def get_transactions_summary():
         return err
     end_year, end_month = end_parsed
 
-    start_date = date(start_year, start_month, 1)
-    end_date = date(end_year, end_month, 1)
-
-    if end_date < start_date:
+    if (end_year, end_month) < (start_year, start_month):
         return jsonify(
             {"error": "bad_request", "message": "'end' must not be before 'start'"}
         ), 400
 
-    summary = AnalysisService(current_app.db_manager).get_period_summary(
-        start_date, end_date
-    )
+    cash_report = CashSpendingSummaryReport(current_app.db_manager)
+    accrual_report = AccrualSpendingSummaryReport(current_app.db_manager)
 
-    # Serialize: expenses_by_category keys are ints; convert to str for JSON compatibility
-    def _serialize_basis(basis_data):
-        result = {}
-        for month_key, month_summary in basis_data.items():
-            result[month_key] = {
-                "income_total": month_summary["income_total"],
-                "expense_total": month_summary["expense_total"],
-                "net": month_summary["net"],
-                "expenses_by_category": {
-                    str(k): v for k, v in month_summary["expenses_by_category"].items()
-                },
-            }
-        return result
+    cash_basis: dict = {}
+    accrual_basis: dict = {}
 
-    return jsonify(
-        {
-            "cash_basis": _serialize_basis(summary["cash_basis"]),
-            "accrual_basis": _serialize_basis(summary["accrual_basis"]),
-        }
-    )
+    year, month = start_year, start_month
+    while (year, month) <= (end_year, end_month):
+        month_key = f"{year:04d}/{month:02d}"
+        cash_summary = cash_report.run(year, month)
+        accrual_summary = accrual_report.run(year, month)
+
+        cash_basis[month_key] = _serialize_summary(cash_summary)
+        accrual_basis[month_key] = _serialize_summary(accrual_summary)
+
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+
+    return jsonify({"cash_basis": cash_basis, "accrual_basis": accrual_basis})
+
+
+def _serialize_summary(summary) -> dict:
+    return {
+        "income_total": summary.income_total,
+        "expense_total": summary.expense_total,
+        "net": summary.net,
+        "expenses_by_category": {
+            str(k): v for k, v in summary.expenses_by_category.items()
+        },
+    }
 
 
 @api_bp.route("/transactions")
