@@ -1,5 +1,9 @@
-<form hx-patch="/ui/budgets/{{ budget.id }}" hx-target="#budget-amount-{{ budget.id }}" hx-swap="outerHTML" style="display:inline">
-  <input type="number" name="amount" value="{{ '%.2f'|format(budget.amount / 100) }}" step="0.01" min="0.01" style="width:8em" required>
-  <button type="submit">Save</button>
-  <button type="button" hx-get="/ui/budgets/{{ budget.id }}/amount" hx-target="#budget-amount-{{ budget.id }}" hx-swap="outerHTML">Cancel</button>
-</form>
+<td id="budget-amount-{{ budget.id }}" class="px-4 py-2 border-b border-gray-100">
+  <form hx-patch="/ui/budgets/{{ budget.id }}" hx-target="#budget-amount-{{ budget.id }}" hx-swap="outerHTML" class="flex items-center gap-2">
+    <input type="number" name="amount" value="{{ '%.2f'|format(budget.amount / 100) }}" step="0.01" min="0.01" required
+      class="border border-gray-300 rounded px-2 py-1 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <button type="submit" class="btn-primary">Save</button>
+    <button type="button" hx-get="/ui/budgets/{{ budget.id }}/amount" hx-target="#budget-amount-{{ budget.id }}" hx-swap="outerHTML"
+      class="btn-secondary">Cancel</button>
+  </form>
+</td>

@@ -129,7 +129,12 @@ def account_create():
         )
 
     all_accounts = AccountRepository(current_app.db_manager).find_all()
-    return render_template("fragments/account_list.html", accounts=all_accounts)
+    return render_template(
+        "fragments/account_list.html",
+        accounts=all_accounts,
+        flash_kind="success",
+        flash_message="Account created.",
+    )
 
 
 @ui_bp.route("/categories")
@@ -341,6 +346,8 @@ def import_review(data_import_id):
         transactions_url=f"/ui/transactions?month={month_str}",
         month_str=month_str,
         mode="review",
+        flash_kind="success",
+        flash_message="Import saved.",
     )
 
 
@@ -444,7 +451,11 @@ def budget_create():
 
     all_budgets = BudgetRepository(current_app.db_manager).find_all()
     return render_template(
-        "fragments/budget_list.html", budgets=all_budgets, error=None
+        "fragments/budget_list.html",
+        budgets=all_budgets,
+        error=None,
+        flash_kind="success",
+        flash_message="Budget created.",
     )
 
 

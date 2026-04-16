@@ -1,23 +1,25 @@
 <section>
-  <h2>Categories</h2>
+  <h1 class="page-title">Categories</h1>
   {% if categories %}
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for category in categories %}
-      <tr>
-        <td>{{ category.name }}</td>
-        <td>{{ category.description or '' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="section-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td class="font-medium">{{ category.name }}</td>
+          <td class="text-gray-600">{{ category.description or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <p>No categories found.</p>
+  <p class="text-gray-500 text-sm">No categories found.</p>
   {% endif %}
 </section>

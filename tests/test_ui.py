@@ -106,7 +106,7 @@ class TestAccountsUI:
 
     def test_accounts_renders_table(self, client, account):
         html = client.get("/ui/accounts").data.decode()
-        assert "<table>" in html
+        assert "<table" in html
         assert "<th>" in html
 
     def test_accounts_has_add_account_button(self, client):
@@ -162,7 +162,7 @@ class TestAccountCreateUI:
             data={"name": "Bad Name", "account_type": "bofa", "description": "BofA"},
         )
         html = resp.data.decode()
-        assert "Error" in html
+        assert "error-box" in html
 
     def test_account_create_invalid_name_preserves_form_values(self, client):
         resp = client.post(
@@ -245,7 +245,7 @@ class TestTransactionsUI:
 
     def test_transactions_invalid_month_shows_error(self, client):
         html = client.get("/ui/transactions?month=badmonth").data.decode()
-        assert "Error" in html
+        assert "error-box" in html
 
     def test_transactions_empty_month(self, client):
         html = client.get("/ui/transactions?month=2025/01").data.decode()
@@ -267,7 +267,7 @@ class TestTransactionsUI:
 
     def test_transactions_renders_table(self, client, transaction):
         html = client.get("/ui/transactions?month=2025/03").data.decode()
-        assert "<table>" in html
+        assert "<table" in html
 
     def test_transactions_year_boundary_prev(self, client):
         # January → prev should be December of previous year
@@ -406,7 +406,7 @@ class TestImportUI:
             content_type="multipart/form-data",
         )
         assert resp.status_code == 400
-        assert "Error" in resp.data.decode()
+        assert "error-box" in resp.data.decode()
 
     def test_import_review_valid_edits_returns_success(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(

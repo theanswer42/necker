@@ -1,7 +1,7 @@
 <section>
-  <h2>Review Import{% if account %} — {{ account.name }}{% endif %}</h2>
+  <h1 class="page-title">Review Import{% if account %} — {{ account.name }}{% endif %}</h1>
   {% if result %}
-  <p>
+  <p class="text-sm text-gray-600 mb-4">
     Imported {{ result.inserted }} transaction{{ 's' if result.inserted != 1 else '' }}
     ({{ result.skipped }} duplicate{{ 's' if result.skipped != 1 else '' }} skipped,
     {{ result.categorized }} auto-categorized).
@@ -9,57 +9,63 @@
   </p>
   {% endif %}
   <form hx-post="/ui/imports/{{ data_import_id }}/review" hx-target="#content">
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Description</th>
-          <th>Amount</th>
-          <th>Auto-category</th>
-          <th>Category</th>
-          <th>Merchant</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for t in transactions %}
-        {% set pending = edits.get(t.id, {}) %}
-        {% set pending_cat = pending.get('category_id', '') %}
-        {% set pending_merchant = pending.get('merchant_name', '') %}
-        <tr>
-          <td>{{ t.transaction_date.isoformat() }}</td>
-          <td>{{ t.description }}</td>
-          <td>${{ "%.2f"|format(t.amount / 100) }}</td>
-          <td>
-            {% if t.auto_category_id and t.auto_category_id in categories_map %}
-              <em>{{ categories_map[t.auto_category_id] }}</em>
-            {% endif %}
-          </td>
-          <td>
-            <select name="category_id_{{ t.id }}">
-              <option value="">-- None --</option>
-              {% for c in categories %}
-              <option value="{{ c.id }}"
-                {% if pending_cat and pending_cat == c.id|string %}selected
-                {% elif not pending_cat and t.auto_category_id == c.id %}selected{% endif %}>
-                {{ c.name }}
-              </option>
-              {% endfor %}
-            </select>
-            {% if row_errors.get(t.id, {}).get('category') %}
-            <span style="color:red"> {{ row_errors[t.id]['category'] }}</span>
-            {% endif %}
-          </td>
-          <td>
-            <input type="text" name="merchant_name_{{ t.id }}"
-              value="{{ pending_merchant if pending_merchant else (t.auto_merchant_name or '') }}">
-            {% if row_errors.get(t.id, {}).get('merchant') %}
-            <span style="color:red"> {{ row_errors[t.id]['merchant'] }}</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <button type="submit">Save changes</button>
+    <div class="section-card mb-4">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th class="text-right">Amount</th>
+              <th>Auto-category</th>
+              <th>Category</th>
+              <th>Merchant</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in transactions %}
+            {% set pending = edits.get(t.id, {}) %}
+            {% set pending_cat = pending.get('category_id', '') %}
+            {% set pending_merchant = pending.get('merchant_name', '') %}
+            <tr>
+              <td class="whitespace-nowrap text-gray-600">{{ t.transaction_date.isoformat() }}</td>
+              <td class="max-w-xs truncate">{{ t.description }}</td>
+              <td class="text-right tabular-nums">${{ "%.2f"|format(t.amount / 100) }}</td>
+              <td class="text-gray-500 italic text-xs">
+                {% if t.auto_category_id and t.auto_category_id in categories_map %}
+                  {{ categories_map[t.auto_category_id] }}
+                {% endif %}
+              </td>
+              <td>
+                <select name="category_id_{{ t.id }}"
+                  class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="">-- None --</option>
+                  {% for c in categories %}
+                  <option value="{{ c.id }}"
+                    {% if pending_cat and pending_cat == c.id|string %}selected
+                    {% elif not pending_cat and t.auto_category_id == c.id %}selected{% endif %}>
+                    {{ c.name }}
+                  </option>
+                  {% endfor %}
+                </select>
+                {% if row_errors.get(t.id, {}).get('category') %}
+                <span class="inline-error"> {{ row_errors[t.id]['category'] }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <input type="text" name="merchant_name_{{ t.id }}"
+                  value="{{ pending_merchant if pending_merchant else (t.auto_merchant_name or '') }}"
+                  class="border border-gray-300 rounded px-2 py-1 text-sm w-40 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                {% if row_errors.get(t.id, {}).get('merchant') %}
+                <span class="inline-error"> {{ row_errors[t.id]['merchant'] }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <button type="submit" class="btn-primary">Save changes</button>
   </form>
 </section>

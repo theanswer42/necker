@@ -66,6 +66,33 @@ uv run ruff check .
 ```
 If `ruff check` reports errors, fix them before committing. Do not skip this step.
 
+If you modified any file in `app/templates/` or `app/static/src/input.css`, you must also rebuild the Tailwind CSS:
+```bash
+./scripts/build-css.sh
+```
+Commit the updated `app/static/dist/app.css` along with your template changes.
+
+## Tailwind CSS
+
+The web UI uses [Tailwind CSS v3.4.17](https://github.com/tailwindlabs/tailwindcss/releases/tag/v3.4.17) via the standalone CLI binary (no Node.js required). The binary is **not** checked into the repo.
+
+**Setup (one-time)**:
+1. Download the standalone binary for your platform from:
+   `https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-linux-x64`
+   (replace `linux-x64` with your platform, e.g. `macos-arm64`)
+2. Place it at `/usr/local/bin/tailwindcss` (or anywhere on PATH) and `chmod +x`.
+
+**Rebuild CSS** (after template or `input.css` changes):
+```bash
+./scripts/build-css.sh          # one-shot, minified
+./scripts/build-css.sh --watch  # watch mode for development
+```
+
+Key files:
+- `app/static/src/input.css` — Tailwind directives + `@layer components` utility classes
+- `tailwind.config.js` — content paths for JIT scanning
+- `app/static/dist/app.css` — built output (committed to repo)
+
 ## Important Notes
 
 - The `samples/` directory contains sample data files that should only be examined when specifically needed for development tasks

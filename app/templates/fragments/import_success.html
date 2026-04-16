@@ -1,29 +1,41 @@
+{% from "macros/flash.html" import flash %}
+
+{% if flash_message %}
+  {{ flash(flash_kind, flash_message) }}
+{% endif %}
+
 <section>
-  <h2>Import Complete</h2>
-  {% if mode == 'review' %}
-  <p>Updated {{ result.updated }} transaction{{ 's' if result.updated != 1 else '' }}.</p>
-  {% else %}
-  {% if result.parsed == 0 %}
-  <p>No transactions found in the CSV file.</p>
-  {% elif result.inserted == 0 %}
-  <p>
-    {{ result.parsed }} transaction{{ 's' if result.parsed != 1 else '' }} parsed —
-    all were duplicates and skipped.
-  </p>
-  {% else %}
-  <p>
-    Imported {{ result.inserted }} transaction{{ 's' if result.inserted != 1 else '' }}
-    ({{ result.skipped }} duplicate{{ 's' if result.skipped != 1 else '' }} skipped,
-    {{ result.categorized }} auto-categorized).
-  </p>
-  {% endif %}
-  {% endif %}
-  {% if transactions_url %}
-  <p>
-    <a hx-get="{{ transactions_url }}" hx-target="#content" hx-push-url="true">
-      View {{ month_str }} transactions &rarr;
-    </a>
-  </p>
-  {% endif %}
-  <p><a hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true">Import more transactions</a></p>
+  <h1 class="page-title">Import Complete</h1>
+  <div class="bg-white rounded-lg border border-gray-200 p-6 max-w-lg">
+    {% if mode == 'review' %}
+    <p class="text-gray-700 mb-4">Updated {{ result.updated }} transaction{{ 's' if result.updated != 1 else '' }}.</p>
+    {% else %}
+    {% if result.parsed == 0 %}
+    <p class="text-gray-600 mb-4">No transactions found in the CSV file.</p>
+    {% elif result.inserted == 0 %}
+    <p class="text-gray-600 mb-4">
+      {{ result.parsed }} transaction{{ 's' if result.parsed != 1 else '' }} parsed —
+      all were duplicates and skipped.
+    </p>
+    {% else %}
+    <p class="text-gray-700 mb-4">
+      Imported {{ result.inserted }} transaction{{ 's' if result.inserted != 1 else '' }}
+      ({{ result.skipped }} duplicate{{ 's' if result.skipped != 1 else '' }} skipped,
+      {{ result.categorized }} auto-categorized).
+    </p>
+    {% endif %}
+    {% endif %}
+    <div class="flex flex-col gap-2">
+      {% if transactions_url %}
+      <a hx-get="{{ transactions_url }}" hx-target="#content" hx-push-url="true"
+         class="btn-primary self-start">
+        View {{ month_str }} transactions &rarr;
+      </a>
+      {% endif %}
+      <a hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true"
+         class="btn-secondary self-start">
+        Import more transactions
+      </a>
+    </div>
+  </div>
 </section>
