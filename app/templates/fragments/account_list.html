@@ -1,26 +1,38 @@
+{% from "macros/flash.html" import flash %}
+
+{% if flash_message %}
+  {{ flash(flash_kind, flash_message) }}
+{% endif %}
+
 <section>
-  <h2>Accounts</h2>
-  <p><button hx-get="/ui/accounts/new" hx-target="#content" hx-push-url="true">Add Account</button></p>
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="page-title mb-0">Accounts</h1>
+    <button hx-get="/ui/accounts/new" hx-target="#content" hx-push-url="true" class="btn-primary">
+      Add Account
+    </button>
+  </div>
   {% if accounts %}
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for account in accounts %}
-      <tr>
-        <td>{{ account.name }}</td>
-        <td>{{ account.account_type }}</td>
-        <td>{{ account.description }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="section-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in accounts %}
+        <tr>
+          <td class="font-medium">{{ account.name }}</td>
+          <td>{{ account.account_type }}</td>
+          <td class="text-gray-600">{{ account.description }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <p>No accounts found.</p>
+  <p class="text-gray-500 text-sm">No accounts found.</p>
   {% endif %}
 </section>

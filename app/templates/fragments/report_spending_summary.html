@@ -1,54 +1,77 @@
 {% if error %}
-<p><strong>Error:</strong> {{ error }}</p>
+<div class="error-box">{{ error }}</div>
 {% else %}
 <section>
-  <nav>
-    <a hx-get="/ui/reports/spending-summary?month={{ prev_month }}&basis={{ basis }}" hx-target="#content">&larr; {{ prev_month }}</a>
-    <strong>Spending Summary — {{ month_label }} ({{ basis }} basis)</strong>
-    <a hx-get="/ui/reports/spending-summary?month={{ next_month }}&basis={{ basis }}" hx-target="#content">{{ next_month }} &rarr;</a>
-  </nav>
+  <h1 class="page-title">Spending Summary</h1>
 
-  <p>
+  <div class="flex items-center gap-4 mb-4">
+    <a hx-get="/ui/reports/spending-summary?month={{ prev_month }}&basis={{ basis }}" hx-target="#content"
+       class="text-sm text-blue-600 hover:underline cursor-pointer">&larr; {{ prev_month }}</a>
+    <span class="font-semibold text-gray-800">{{ month_label }} ({{ basis }} basis)</span>
+    <a hx-get="/ui/reports/spending-summary?month={{ next_month }}&basis={{ basis }}" hx-target="#content"
+       class="text-sm text-blue-600 hover:underline cursor-pointer">{{ next_month }} &rarr;</a>
+  </div>
+
+  <div class="flex items-center gap-4 mb-6 text-sm">
     {% if basis == "cash" %}
-      <a hx-get="/ui/reports/spending-summary?month={{ month_label }}&basis=accrual" hx-target="#content">Switch to accrual basis</a>
+      <a hx-get="/ui/reports/spending-summary?month={{ month_label }}&basis=accrual" hx-target="#content"
+         class="text-blue-600 hover:underline cursor-pointer">Switch to accrual basis</a>
     {% else %}
-      <a hx-get="/ui/reports/spending-summary?month={{ month_label }}&basis=cash" hx-target="#content">Switch to cash basis</a>
+      <a hx-get="/ui/reports/spending-summary?month={{ month_label }}&basis=cash" hx-target="#content"
+         class="text-blue-600 hover:underline cursor-pointer">Switch to cash basis</a>
     {% endif %}
-    &middot;
-    <a hx-get="/ui/reports/transactions?month={{ month_label }}&basis={{ basis }}" hx-target="#content">View transactions</a>
-  </p>
+    <span class="text-gray-400">&middot;</span>
+    <a hx-get="/ui/reports/transactions?month={{ month_label }}&basis={{ basis }}" hx-target="#content"
+       class="text-blue-600 hover:underline cursor-pointer">View transactions</a>
+  </div>
 
-  <table>
-    <tbody>
-      <tr><th>Income</th><td>${{ "%.2f"|format(summary.income_total / 100) }}</td></tr>
-      <tr><th>Expenses</th><td>${{ "%.2f"|format(summary.expense_total / 100) }}</td></tr>
-      <tr><th>Net</th><td>${{ "%.2f"|format(summary.net / 100) }}</td></tr>
-    </tbody>
-  </table>
+  <div class="section-card max-w-xs mb-6">
+    <table class="data-table">
+      <tbody>
+        <tr>
+          <td class="font-medium text-gray-700">Income</td>
+          <td class="text-right tabular-nums">${{ "%.2f"|format(summary.income_total / 100) }}</td>
+        </tr>
+        <tr>
+          <td class="font-medium text-gray-700">Expenses</td>
+          <td class="text-right tabular-nums">${{ "%.2f"|format(summary.expense_total / 100) }}</td>
+        </tr>
+        <tr>
+          <td class="font-semibold">Net</td>
+          <td class="text-right tabular-nums font-semibold">${{ "%.2f"|format(summary.net / 100) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   {% if summary.expenses_by_category %}
-  <h3>Expenses by Category</h3>
-  <table>
-    <thead>
-      <tr><th>Category</th><th>Amount</th></tr>
-    </thead>
-    <tbody>
-      {% for cat_id, amount in summary.expenses_by_category.items()|sort(attribute=1, reverse=True) %}
-      <tr>
-        <td>
-          {% if cat_id and cat_id in categories %}
-            {{ categories[cat_id] }}
-          {% else %}
-            (uncategorized)
-          {% endif %}
-        </td>
-        <td>${{ "%.2f"|format(amount / 100) }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h2 class="text-lg font-semibold mb-3 text-gray-900">Expenses by Category</h2>
+  <div class="section-card max-w-sm">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th class="text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat_id, amount in summary.expenses_by_category.items()|sort(attribute=1, reverse=True) %}
+        <tr>
+          <td>
+            {% if cat_id and cat_id in categories %}
+              {{ categories[cat_id] }}
+            {% else %}
+              <span class="text-gray-400">(uncategorized)</span>
+            {% endif %}
+          </td>
+          <td class="text-right tabular-nums">${{ "%.2f"|format(amount / 100) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <p>No expenses for {{ month_label }} on {{ basis }} basis.</p>
+  <p class="text-gray-500 text-sm">No expenses for {{ month_label }} on {{ basis }} basis.</p>
   {% endif %}
 </section>
 {% endif %}

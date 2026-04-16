@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Necker{% endblock %}</title>
-  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/app.css') }}">
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   <script>
     document.addEventListener('htmx:configRequest', function(e) {
@@ -16,25 +16,82 @@
     });
   </script>
 </head>
-<body>
-  <header>
-    <nav>
-      <a href="/">Necker</a>
-      <a hx-get="/ui/transactions" hx-target="#content" hx-push-url="true">Transactions</a>
-      <a hx-get="/ui/accounts" hx-target="#content" hx-push-url="true">Accounts</a>
-      <a hx-get="/ui/categories" hx-target="#content" hx-push-url="true">Categories</a>
-      <a hx-get="/ui/budgets" hx-target="#content" hx-push-url="true">Budgets</a>
-      <a hx-get="/ui/reports/spending-summary" hx-target="#content" hx-push-url="true">Reports</a>
-      <a hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true">Import</a>
-    </nav>
+<body class="h-screen flex flex-col bg-gray-50 text-gray-900 antialiased">
+
+  <header class="bg-white border-b border-gray-200 flex items-center justify-between px-6 py-3 shrink-0 z-10">
+    <div class="font-semibold text-lg tracking-tight text-gray-900">Necker</div>
+    <div id="flash" role="status" aria-live="polite" class="text-sm"></div>
   </header>
 
-  <main id="content">
-    {% block content %}{% endblock %}
-  </main>
+  <div class="flex flex-1 min-h-0">
 
-  <footer>
-    <p>Necker — Personal Finance</p>
-  </footer>
+    <nav id="sidebar" class="w-56 shrink-0 bg-white border-r border-gray-200 overflow-y-auto py-4">
+      <ul class="space-y-0.5 px-3">
+        <li>
+          <a hx-get="/ui/transactions" hx-target="#content" hx-push-url="true"
+             data-path="/ui/transactions"
+             class="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 cursor-pointer aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-700 aria-[current=page]:font-medium">
+            Transactions
+          </a>
+        </li>
+        <li>
+          <a hx-get="/ui/accounts" hx-target="#content" hx-push-url="true"
+             data-path="/ui/accounts"
+             class="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 cursor-pointer aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-700 aria-[current=page]:font-medium">
+            Accounts
+          </a>
+        </li>
+        <li>
+          <a hx-get="/ui/categories" hx-target="#content" hx-push-url="true"
+             data-path="/ui/categories"
+             class="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 cursor-pointer aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-700 aria-[current=page]:font-medium">
+            Categories
+          </a>
+        </li>
+        <li>
+          <a hx-get="/ui/budgets" hx-target="#content" hx-push-url="true"
+             data-path="/ui/budgets"
+             class="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 cursor-pointer aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-700 aria-[current=page]:font-medium">
+            Budgets
+          </a>
+        </li>
+        <li>
+          <a hx-get="/ui/reports/spending-summary" hx-target="#content" hx-push-url="true"
+             data-path="/ui/reports/spending-summary"
+             class="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 cursor-pointer aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-700 aria-[current=page]:font-medium">
+            Reports
+          </a>
+        </li>
+        <li>
+          <a hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true"
+             data-path="/ui/imports/new"
+             class="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 cursor-pointer aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-700 aria-[current=page]:font-medium">
+            Import
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <main id="content" class="flex-1 overflow-auto p-6">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <script>
+    function setActiveLink() {
+      var path = window.location.pathname;
+      document.querySelectorAll('#sidebar a[data-path]').forEach(function(a) {
+        if (a.dataset.path === path) {
+          a.setAttribute('aria-current', 'page');
+        } else {
+          a.removeAttribute('aria-current');
+        }
+      });
+    }
+    document.addEventListener('DOMContentLoaded', setActiveLink);
+    document.addEventListener('htmx:pushedIntoHistory', setActiveLink);
+  </script>
+
 </body>
 </html>

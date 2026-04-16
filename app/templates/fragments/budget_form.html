@@ -1,25 +1,34 @@
 {% if error %}
-<p><strong>Error:</strong> {{ error }}</p>
+<div class="error-box">{{ error }}</div>
 {% endif %}
-<section>
-  <h3>New Budget</h3>
-  <form hx-post="/ui/budgets" hx-target="#content">
-    <label for="category_id">Category</label>
-    <select name="category_id" id="category_id" required>
-      <option value="">Select category...</option>
-      {% for c in categories %}
-      <option value="{{ c.id }}"{% if form_data.get('category_id') == c.id|string %} selected{% endif %}>{{ c.name }}</option>
-      {% endfor %}
-    </select>
-    <label for="period_type">Period</label>
-    <select name="period_type" id="period_type" required>
-      <option value="">Select period...</option>
-      <option value="monthly"{% if form_data.get('period_type') == 'monthly' %} selected{% endif %}>Monthly</option>
-      <option value="yearly"{% if form_data.get('period_type') == 'yearly' %} selected{% endif %}>Yearly</option>
-    </select>
-    <label for="amount">Amount (dollars)</label>
-    <input type="number" name="amount" id="amount" placeholder="500.00" step="0.01" min="0.01" required
-      value="{{ form_data.get('amount', '') }}">
-    <button type="submit">Create Budget</button>
-  </form>
-</section>
+<div class="section-card max-w-lg mt-4">
+  <div class="p-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-900">New Budget</h2>
+    <form hx-post="/ui/budgets" hx-target="#content">
+      <div class="form-group">
+        <label for="category_id" class="form-label">Category</label>
+        <select name="category_id" id="category_id" required class="form-select">
+          <option value="">Select category...</option>
+          {% for c in categories %}
+          <option value="{{ c.id }}"{% if form_data.get('category_id') == c.id|string %} selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="period_type" class="form-label">Period</label>
+        <select name="period_type" id="period_type" required class="form-select">
+          <option value="">Select period...</option>
+          <option value="monthly"{% if form_data.get('period_type') == 'monthly' %} selected{% endif %}>Monthly</option>
+          <option value="yearly"{% if form_data.get('period_type') == 'yearly' %} selected{% endif %}>Yearly</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="amount" class="form-label">Amount (dollars)</label>
+        <input type="number" name="amount" id="amount" placeholder="500.00" step="0.01" min="0.01" required
+          value="{{ form_data.get('amount', '') }}"
+          class="form-input">
+      </div>
+      <button type="submit" class="btn-primary">Create Budget</button>
+    </form>
+  </div>
+</div>

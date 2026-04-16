@@ -1,47 +1,57 @@
 {% if error %}
-<p><strong>Error:</strong> {{ error }}</p>
+<div class="error-box">{{ error }}</div>
 {% else %}
 <section>
-  <nav>
-    <a hx-get="/ui/transactions?month={{ prev_month }}" hx-target="#content">&larr; {{ prev_month }}</a>
-    <strong>{{ month_label }}</strong>
-    <a hx-get="/ui/transactions?month={{ next_month }}" hx-target="#content">{{ next_month }} &rarr;</a>
-  </nav>
-  <p><button hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true">Import transactions</button></p>
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="page-title mb-0">Transactions</h1>
+    <button hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true" class="btn-primary">
+      Import transactions
+    </button>
+  </div>
+
+  <div class="flex items-center gap-4 mb-4">
+    <a hx-get="/ui/transactions?month={{ prev_month }}" hx-target="#content"
+       class="text-sm text-blue-600 hover:underline cursor-pointer">&larr; {{ prev_month }}</a>
+    <span class="font-semibold text-gray-800">{{ month_label }}</span>
+    <a hx-get="/ui/transactions?month={{ next_month }}" hx-target="#content"
+       class="text-sm text-blue-600 hover:underline cursor-pointer">{{ next_month }} &rarr;</a>
+  </div>
 
   {% if transactions %}
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Description</th>
-        <th>Merchant</th>
-        <th>Category</th>
-        <th>Amount</th>
-        <th>Type</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in transactions %}
-      <tr>
-        <td>{{ t.transaction_date.isoformat() }}</td>
-        <td>{{ t.description }}</td>
-        <td>{{ t.merchant_name or t.auto_merchant_name or '' }}</td>
-        <td>
-          {% if t.category_id and t.category_id in categories %}
-            {{ categories[t.category_id] }}
-          {% elif t.auto_category_id and t.auto_category_id in categories %}
-            <em>{{ categories[t.auto_category_id] }}</em>
-          {% endif %}
-        </td>
-        <td>${{ "%.2f"|format(t.amount / 100) }}</td>
-        <td>{{ t.transaction_type }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="section-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Merchant</th>
+          <th>Category</th>
+          <th class="text-right">Amount</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td class="whitespace-nowrap text-gray-600">{{ t.transaction_date.isoformat() }}</td>
+          <td>{{ t.description }}</td>
+          <td>{{ t.merchant_name or t.auto_merchant_name or '' }}</td>
+          <td>
+            {% if t.category_id and t.category_id in categories %}
+              {{ categories[t.category_id] }}
+            {% elif t.auto_category_id and t.auto_category_id in categories %}
+              <em class="text-gray-500">{{ categories[t.auto_category_id] }}</em>
+            {% endif %}
+          </td>
+          <td class="text-right tabular-nums">${{ "%.2f"|format(t.amount / 100) }}</td>
+          <td class="text-gray-500 text-xs">{{ t.transaction_type }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <p>No transactions for {{ month_label }}.</p>
+  <p class="text-gray-500 text-sm">No transactions for {{ month_label }}.</p>
   {% endif %}
 </section>
 {% endif %}
