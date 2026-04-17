@@ -1,9 +1,11 @@
 """Shared pytest fixtures for all tests."""
 
+import io
 import sqlite3
 import pytest
 from pathlib import Path
 
+from cli.output import OutputWriter, TextRenderer
 from config import Config, get_migrations_dir
 from repositories.accounts import AccountRepository
 from repositories.budgets import BudgetRepository
@@ -11,6 +13,16 @@ from repositories.categories import CategoryRepository
 from repositories.data_imports import DataImportRepository
 from repositories.transactions import TransactionRepository
 from tests.helpers import run_migrations
+
+
+@pytest.fixture
+def output():
+    """Provide a quiet OutputWriter that discards its output.
+
+    Tests that assert on rendered text should construct their own writer
+    with an explicit StringIO stream.
+    """
+    return OutputWriter(TextRenderer(stream=io.StringIO()))
 
 
 @pytest.fixture

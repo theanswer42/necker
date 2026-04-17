@@ -44,22 +44,22 @@ def _make_populated_db_manager(tmp_path: Path) -> DatabaseManager:
     return db_manager
 
 
-def test_backup_creates_file_at_output_path(tmp_path):
+def test_backup_creates_file_at_output_path(tmp_path, output):
     db_manager = _make_populated_db_manager(tmp_path)
     out = tmp_path / "backup.db"
 
     args = Namespace(output_path=str(out))
-    cmd_backup(args, db_manager)
+    cmd_backup(args, db_manager, output)
 
     assert out.exists()
 
 
-def test_backup_contents_match_source(tmp_path):
+def test_backup_contents_match_source(tmp_path, output):
     db_manager = _make_populated_db_manager(tmp_path)
     out = tmp_path / "backup.db"
 
     args = Namespace(output_path=str(out))
-    cmd_backup(args, db_manager)
+    cmd_backup(args, db_manager, output)
 
     # Open the backup as a plain sqlite DB and confirm our row survived.
     conn = sqlite3.connect(out)
@@ -72,12 +72,12 @@ def test_backup_contents_match_source(tmp_path):
     assert rows == [("acct", "bofa")]
 
 
-def test_backup_schema_matches_source(tmp_path):
+def test_backup_schema_matches_source(tmp_path, output):
     db_manager = _make_populated_db_manager(tmp_path)
     out = tmp_path / "backup.db"
 
     args = Namespace(output_path=str(out))
-    cmd_backup(args, db_manager)
+    cmd_backup(args, db_manager, output)
 
     with db_manager.connect() as source:
         source_tables = {
@@ -101,26 +101,26 @@ def test_backup_schema_matches_source(tmp_path):
     assert backup_tables == source_tables
 
 
-def test_backup_errors_when_output_exists(tmp_path):
+def test_backup_errors_when_output_exists(tmp_path, output):
     db_manager = _make_populated_db_manager(tmp_path)
     out = tmp_path / "existing.db"
     out.write_bytes(b"not really a db")
 
     args = Namespace(output_path=str(out))
     with pytest.raises(FileExistsError):
-        cmd_backup(args, db_manager)
+        cmd_backup(args, db_manager, output)
 
 
-def test_backup_errors_when_parent_missing(tmp_path):
+def test_backup_errors_when_parent_missing(tmp_path, output):
     db_manager = _make_populated_db_manager(tmp_path)
     out = tmp_path / "nope" / "backup.db"
 
     args = Namespace(output_path=str(out))
     with pytest.raises(FileNotFoundError):
-        cmd_backup(args, db_manager)
+        cmd_backup(args, db_manager, output)
 
 
-def test_backup_errors_when_source_db_missing(tmp_path):
+def test_backup_errors_when_source_db_missing(tmp_path, output):
     # Build a config whose db_path doesn't exist and never ran migrations.
     config = _make_config(tmp_path)
     db_manager = DatabaseManager(config)
@@ -128,12 +128,12 @@ def test_backup_errors_when_source_db_missing(tmp_path):
 
     args = Namespace(output_path=str(out))
     with pytest.raises(FileNotFoundError):
-        cmd_backup(args, db_manager)
+        cmd_backup(args, db_manager, output)
 
 
-def test_backup_refuses_to_overwrite_source(tmp_path):
+def test_backup_refuses_to_overwrite_source(tmp_path, output):
     db_manager = _make_populated_db_manager(tmp_path)
     # Point output at the source db itself — caught by the "already exists" check.
     args = Namespace(output_path=str(db_manager.config.db_path))
     with pytest.raises(FileExistsError):
-        cmd_backup(args, db_manager)
+        cmd_backup(args, db_manager, output)

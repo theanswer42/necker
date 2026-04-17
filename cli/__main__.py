@@ -34,6 +34,7 @@ from cli import (
     backup,
     reports,
 )
+from cli.output import OutputWriter, TextRenderer
 from config import load_config
 from db.manager import DatabaseManager
 from logger import setup_logging
@@ -80,20 +81,23 @@ def main():
             # Create database manager
             db_manager = DatabaseManager(config)
 
+            # Writer for typed data output (stdout)
+            output = OutputWriter(TextRenderer())
+
             if args.command in (
                 "accounts",
                 "transactions",
                 "categories",
                 "budgets",
                 "reports",
-                "serve",
             ):
+                args.func(args, db_manager, config, output)
+            elif args.command == "serve":
                 args.func(args, db_manager, config)
             elif args.command in ("migrate", "backup"):
-                # These commands need db_manager only
-                args.func(args, db_manager)
+                args.func(args, db_manager, output)
             else:
-                args.func(args)
+                args.func(args, output)
         except Exception as e:
             print(f"Error: {e}")
             sys.exit(1)

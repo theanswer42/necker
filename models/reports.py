@@ -19,7 +19,11 @@ class MonthSpendingSummary:
     year: int
     month: int
     basis: str  # "cash" or "accrual"
-    income_total: int  # cents
-    expense_total: int  # cents
-    net: int  # cents (income - expenses)
-    expenses_by_category: Dict[int, int] = field(default_factory=dict)
+    income_total: int = field(metadata={"cli_format": "cents_to_dollars"})  # cents
+    expense_total: int = field(metadata={"cli_format": "cents_to_dollars"})  # cents
+    net: int = field(
+        metadata={"cli_format": "cents_to_dollars"}
+    )  # cents (income - expenses)
+    expenses_by_category: Dict[int, int] = field(
+        default_factory=dict, metadata={"cli_format": "cents_to_dollars"}
+    )

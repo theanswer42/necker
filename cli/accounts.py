@@ -8,7 +8,7 @@ from repositories.accounts import AccountRepository
 logger = get_logger()
 
 
-def cmd_list(args, db_manager, config):
+def cmd_list(args, db_manager, config, output):
     """List all accounts in the database."""
     accounts = AccountRepository(db_manager).find_all()
 
@@ -16,19 +16,10 @@ def cmd_list(args, db_manager, config):
         logger.info("No accounts found.")
         return
 
-    logger.info("\nAccounts:")
-    logger.info("=" * 80)
-    for account in accounts:
-        logger.info(f"ID: {account.id}")
-        logger.info(f"Name: {account.name}")
-        logger.info(f"Type: {account.account_type}")
-        logger.info(f"Description: {account.description}")
-        logger.info("-" * 80)
-
-    logger.info(f"\nTotal accounts: {len(accounts)}")
+    output.collection(accounts, title="Accounts")
 
 
-def cmd_create(args, db_manager, config):
+def cmd_create(args, db_manager, config, output):
     """Interactively create a new account."""
     from services.accounts import AccountService
 
@@ -50,15 +41,12 @@ def cmd_create(args, db_manager, config):
         account = AccountService(db_manager).create_account(
             name, account_type, description
         )
-
-        logger.info(f"\n✓ Account created successfully with ID: {account.id}")
-        logger.info(f"  Name: {account.name}")
-        logger.info(f"  Type: {account.account_type}")
-        logger.info(f"  Description: {account.description}")
-
     except ValueError as e:
         logger.error(str(e))
         sys.exit(1)
+
+    logger.info(f"✓ Account created successfully with ID: {account.id}")
+    output.record(account)
 
 
 def setup_parser(subparsers):

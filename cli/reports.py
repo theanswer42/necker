@@ -4,7 +4,6 @@
 import sys
 
 from logger import get_logger
-from repositories.categories import CategoryRepository
 from reports.accrual_spending_summary import AccrualSpendingSummaryReport
 from reports.cash_spending_summary import CashSpendingSummaryReport
 from reports.month_transactions import MonthTransactionsReport
@@ -12,10 +11,6 @@ from reports.month_transactions import MonthTransactionsReport
 logger = get_logger()
 
 VALID_BASES = ("cash", "accrual")
-
-
-def _format_amount(cents: int) -> str:
-    return f"${cents / 100:,.2f}"
 
 
 def _parse_month_arg(value: str) -> tuple[int, int]:
@@ -36,7 +31,7 @@ def _parse_month_or_exit(value: str) -> tuple[int, int]:
         sys.exit(1)
 
 
-def cmd_transactions(args, db_manager, config):
+def cmd_transactions(args, db_manager, config, output):
     year, month = _parse_month_or_exit(args.month)
     if args.basis not in VALID_BASES:
         logger.error(f"--basis must be one of {', '.join(VALID_BASES)}")
@@ -44,29 +39,12 @@ def cmd_transactions(args, db_manager, config):
 
     report = MonthTransactionsReport(db_manager).run(year, month, args.basis)
 
-    category_names = {c.id: c.name for c in CategoryRepository(db_manager).find_all()}
-
-    print(f"\nTransactions: {year:04d}/{month:02d} ({report.basis} basis)")
-    print("=" * 80)
-
-    if not report.transactions:
-        print("(no transactions)")
-        return
-
-    print(f"{'Date':<12} {'Description':<40} {'Amount':>12}  Category")
-    print("-" * 80)
-    for t in report.transactions:
-        category = (
-            category_names.get(t.category_id, "") if t.category_id is not None else ""
-        )
-        desc = (t.description or "")[:40]
-        print(
-            f"{t.transaction_date.isoformat():<12} {desc:<40} "
-            f"{_format_amount(t.amount):>12}  {category}"
-        )
+    output.section(
+        f"Transactions: {year:04d}/{month:02d} ({report.basis} basis)", report
+    )
 
 
-def cmd_spending_summary(args, db_manager, config):
+def cmd_spending_summary(args, db_manager, config, output):
     year, month = _parse_month_or_exit(args.month)
     if args.basis not in VALID_BASES:
         logger.error(f"--basis must be one of {', '.join(VALID_BASES)}")
@@ -77,25 +55,9 @@ def cmd_spending_summary(args, db_manager, config):
     else:
         summary = AccrualSpendingSummaryReport(db_manager).run(year, month)
 
-    category_names = {c.id: c.name for c in CategoryRepository(db_manager).find_all()}
-
-    print(f"\nSpending Summary: {year:04d}/{month:02d} ({summary.basis} basis)")
-    print("=" * 80)
-    print(f"Income:   {_format_amount(summary.income_total):>14}")
-    print(f"Expenses: {_format_amount(summary.expense_total):>14}")
-    print(f"Net:      {_format_amount(summary.net):>14}")
-
-    if summary.expenses_by_category:
-        print("\nExpenses by Category:")
-        for cat_id, amount in sorted(
-            summary.expenses_by_category.items(), key=lambda item: -item[1]
-        ):
-            label = (
-                category_names.get(cat_id, "(uncategorized)")
-                if cat_id
-                else "(uncategorized)"
-            )
-            print(f"  {label:<30} {_format_amount(amount):>12}")
+    output.section(
+        f"Spending Summary: {year:04d}/{month:02d} ({summary.basis} basis)", summary
+    )
 
 
 def setup_parser(subparsers):

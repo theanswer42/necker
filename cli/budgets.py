@@ -10,29 +10,17 @@ logger = get_logger()
 VALID_PERIOD_TYPES = ("monthly", "yearly")
 
 
-def _format_amount(cents: int) -> str:
-    return f"${cents / 100:.2f}"
-
-
-def cmd_list(args, db_manager, config):
+def cmd_list(args, db_manager, config, output):
     budgets = BudgetRepository(db_manager).find_all()
 
     if not budgets:
         logger.info("No budgets found.")
         return
 
-    logger.info("\nBudgets:")
-    logger.info("=" * 80)
-    logger.info(f"{'ID':<6} {'Category':<30} {'Period':<10} {'Amount':<12}")
-    logger.info("-" * 80)
-    for b in budgets:
-        logger.info(
-            f"{b.id:<6} {b.category_name:<30} {b.period_type:<10} {_format_amount(b.amount):<12}"
-        )
-    logger.info(f"\nTotal budgets: {len(budgets)}")
+    output.collection(budgets, title="Budgets")
 
 
-def cmd_create(args, db_manager, config):
+def cmd_create(args, db_manager, config, output):
     categories_repo = CategoryRepository(db_manager)
     budgets_repo = BudgetRepository(db_manager)
 
@@ -84,16 +72,15 @@ def cmd_create(args, db_manager, config):
 
     try:
         budget = budgets_repo.create(category_id, period_type, amount_cents)
-        logger.info(f"\n✓ Budget created successfully with ID: {budget.id}")
-        logger.info(f"  Category: {budget.category_name}")
-        logger.info(f"  Period: {budget.period_type}")
-        logger.info(f"  Amount: {_format_amount(budget.amount)}")
     except Exception as e:
         logger.error(f"Error creating budget: {e}")
         sys.exit(1)
 
+    logger.info(f"✓ Budget created successfully with ID: {budget.id}")
+    output.record(budget)
 
-def cmd_delete(args, db_manager, config):
+
+def cmd_delete(args, db_manager, config, output):
     budgets_repo = BudgetRepository(db_manager)
     budget_id = args.budget_id
 
@@ -102,11 +89,11 @@ def cmd_delete(args, db_manager, config):
         logger.error(f"Budget with ID {budget_id} not found.")
         sys.exit(1)
 
-    logger.info("\nBudget to delete:")
-    logger.info(f"  ID: {budget.id}")
-    logger.info(f"  Category: {budget.category_name}")
-    logger.info(f"  Period: {budget.period_type}")
-    logger.info(f"  Amount: {_format_amount(budget.amount)}")
+    print("\nBudget to delete:")
+    print(f"  ID: {budget.id}")
+    print(f"  Category: {budget.category_name}")
+    print(f"  Period: {budget.period_type}")
+    print(f"  Amount: ${budget.amount / 100:.2f}")
 
     confirm = (
         input("\nAre you sure you want to delete this budget? (yes/no): ")
@@ -124,7 +111,7 @@ def cmd_delete(args, db_manager, config):
         sys.exit(1)
 
 
-def cmd_modify(args, db_manager, config):
+def cmd_modify(args, db_manager, config, output):
     budgets_repo = BudgetRepository(db_manager)
     budget_id = args.budget_id
 
@@ -150,9 +137,7 @@ def cmd_modify(args, db_manager, config):
         sys.exit(1)
 
     logger.info("✓ Budget updated successfully.")
-    logger.info(f"  Category: {updated.category_name}")
-    logger.info(f"  Period: {updated.period_type}")
-    logger.info(f"  Amount: {_format_amount(updated.amount)}")
+    output.record(updated)
 
 
 def setup_parser(subparsers):

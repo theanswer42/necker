@@ -3,16 +3,18 @@
 
 from pathlib import Path
 
+from cli.outputs import BackupResultOutput
 from logger import get_logger
 
 logger = get_logger()
 
 
-def cmd_backup(args, db_manager):
+def cmd_backup(args, db_manager, output):
     """Back up the configured database to args.output_path."""
     output_path = Path(args.output_path).resolve()
     db_manager.backup_to(output_path)
     logger.info(f"Backed up database to {output_path}")
+    output.record(BackupResultOutput(output_path=str(output_path)))
 
 
 def setup_parser(subparsers):
