@@ -37,7 +37,7 @@ from cli import (
 from cli.output import OutputWriter, TextRenderer
 from config import load_config
 from db.manager import DatabaseManager
-from logger import setup_logging
+from logger import get_logger, setup_logging
 
 
 def main():
@@ -99,7 +99,7 @@ def main():
             else:
                 args.func(args, output)
         except Exception as e:
-            print(f"Error: {e}")
+            get_logger().error(f"Error: {e}")
             sys.exit(1)
     else:
         parser.print_help()

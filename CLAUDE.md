@@ -109,6 +109,27 @@ The project follows a layered architecture:
 
 Services and reports are instantiated with a `db_manager` directly; there is no central DI container.
 
+## CLI Output Conventions
+
+Every `cmd_*` in `cli/` routes its emissions onto three distinct streams. When adding a new command or editing an existing one, classify each line before writing it:
+
+- **log** → `logger.info/warning/error` (stderr). Progress, status, confirmations, error messages. Anything that narrates what the command is doing.
+- **output** → `OutputWriter.record/collection/section` (stdout). The actual data the command produces: a created record, a list of rows, a report payload, a result summary. Always via a typed dataclass.
+- **interaction** → direct `print`/`input` (stdout). Prompts in `create`/`delete` flows and confirmation questions.
+
+The split exists so `python -m cli … | cat` yields only data on stdout, with logs on stderr. Don't cross the streams — e.g. don't `print` structured data, and don't `logger.info` a prompt.
+
+Output dataclass rules:
+- Existing model dataclasses (`Account`, `Category`, `Budget`, `Transaction`) go straight to the writer.
+- Results that don't already have a typed shape (ingest result, migration status, backup result, etc.) get a dataclass in `cli/outputs.py`.
+- Field-level rendering hints live on the dataclass as `field(metadata=...)`:
+  - `cli_format: "cents_to_dollars"` for integer-cents amount fields
+  - `cli_format: "iso_date"` for `date`/`datetime` fields
+  - `cli_label: "..."` to override the displayed field name
+- Metadata sits on the model dataclass (source of truth for the field's domain), not on a per-command display wrapper.
+
+Every `cmd_*` takes `output: OutputWriter` as its last positional parameter. `cli/__main__.py` constructs the writer and dispatches. `cli/server.py` is the exception — it starts Flask and has no data output.
+
 ## Database & Foreign Key Conventions
 
 `PRAGMA foreign_keys = ON` is set on every connection (`db/manager.py`) and in the test fixture (`tests/conftest.py`). Foreign keys are enforced at runtime — declarations in migrations are not just documentation.
