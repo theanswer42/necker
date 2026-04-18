@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional
 import hashlib
@@ -8,11 +8,11 @@ import hashlib
 class Transaction:
     id: str  # checksum of raw transaction data
     account_id: int
-    transaction_date: date
-    post_date: Optional[date]
+    transaction_date: date = field(metadata={"cli_format": "iso_date"})
+    post_date: Optional[date] = field(metadata={"cli_format": "iso_date"})
     description: str
     bank_category: Optional[str]  # category from bank/CSV import
-    amount: int  # always positive, stored in cents (e.g. $5.75 → 575)
+    amount: int = field(metadata={"cli_format": "cents_to_dollars"})
     transaction_type: str  # 'income', 'expense', or 'transfer'
     additional_metadata: Optional[dict] = None
     data_import_id: int = (
@@ -23,7 +23,9 @@ class Transaction:
     merchant_name: Optional[str] = None  # user-defined merchant name
     auto_merchant_name: Optional[str] = None  # LLM-suggested merchant name
     amortize_months: Optional[int] = None  # number of months to amortize over
-    amortize_end_date: Optional[date] = None  # calculated end date for amortization
+    amortize_end_date: Optional[date] = field(
+        default=None, metadata={"cli_format": "iso_date"}
+    )
     accrued: bool = (
         False  # runtime-only flag indicating this is a virtual accrued transaction
     )

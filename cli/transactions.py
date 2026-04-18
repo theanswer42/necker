@@ -3,6 +3,11 @@
 import sys
 import csv
 from pathlib import Path
+from cli.outputs import (
+    ExportResultOutput,
+    IngestResultOutput,
+    UpdateFromCsvOutput,
+)
 from logger import get_logger
 from repositories.accounts import AccountRepository
 from repositories.categories import CategoryRepository
@@ -12,13 +17,14 @@ from services.ingestion import IngestionService
 logger = get_logger()
 
 
-def cmd_ingest(args, db_manager, config):
+def cmd_ingest(args, db_manager, config, output):
     """Ingest transactions from a CSV file for a specific account.
 
     Args:
         args: Parsed command-line arguments with csv_file and account_name
         db_manager: Database manager instance
         config: Application configuration
+        output: OutputWriter for typed data output
     """
     csv_path = Path(args.csv_file)
     if not csv_path.exists():
@@ -36,7 +42,6 @@ def cmd_ingest(args, db_manager, config):
     )
     logger.info(f"Account type: {account.account_type}")
     logger.info(f"CSV file: {args.csv_file}")
-    logger.info("-" * 80)
 
     try:
         result = IngestionService(db_manager, config).ingest_csv(csv_path, account)
@@ -47,36 +52,46 @@ def cmd_ingest(args, db_manager, config):
         logger.error(f"Error during ingestion: {e}")
         sys.exit(1)
 
-    logger.info(f"\nParsed {result['parsed']} transactions from CSV")
-
     if result["parsed"] == 0:
         logger.info("No transactions to import.")
         return
 
-    if result["archive_filename"]:
-        archive_path = config.archive_dir / result["archive_filename"]
-        logger.info(f"Archived CSV to: {archive_path}")
-
-    logger.info(f"Created data import record (ID: {result['data_import_id']})")
-    logger.info(f"✓ Successfully inserted {result['inserted']} transactions")
-
+    if result["inserted"] > 0:
+        logger.info(f"✓ Successfully inserted {result['inserted']} transactions")
     if result["skipped"] > 0:
         logger.info(f"  ({result['skipped']} duplicate transaction(s) skipped)")
-
     if result["inserted"] > 0:
         if result["categorized"] > 0:
             logger.info(f"✓ Auto-categorized {result['categorized']} transaction(s)")
         else:
             logger.info("No transactions were auto-categorized")
 
+    archive_path = (
+        str(config.archive_dir / result["archive_filename"])
+        if result["archive_filename"]
+        else None
+    )
 
-def cmd_set_category(args, db_manager, config):
+    output.record(
+        IngestResultOutput(
+            parsed=result["parsed"],
+            inserted=result["inserted"],
+            skipped=result["skipped"],
+            categorized=result["categorized"],
+            data_import_id=result["data_import_id"],
+            archive_path=archive_path,
+        )
+    )
+
+
+def cmd_set_category(args, db_manager, config, output):
     """Set the category for a transaction.
 
     Args:
         args: Parsed command-line arguments with transaction_id and category
         db_manager: Database manager instance
         config: Application configuration
+        output: OutputWriter for typed data output
     """
     transactions_repo = TransactionRepository(db_manager)
     categories_repo = CategoryRepository(db_manager)
@@ -114,21 +129,23 @@ def cmd_set_category(args, db_manager, config):
             sys.exit(1)
 
         logger.info("✓ Transaction categorized successfully")
-        logger.info(f"  Transaction: {transaction.description[:50]}...")
-        logger.info(f"  Category: {category.name}")
+        output.record(transaction)
 
+    except SystemExit:
+        raise
     except Exception as e:
         logger.error(f"Error updating transaction: {e}")
         sys.exit(1)
 
 
-def cmd_export(args, db_manager, config):
+def cmd_export(args, db_manager, config, output):
     """Export transactions to CSV.
 
     Args:
         args: Parsed command-line arguments
         db_manager: Database manager instance
         config: Application configuration
+        output: OutputWriter for typed data output
     """
     accounts_repo = AccountRepository(db_manager)
     transactions_repo = TransactionRepository(db_manager)
@@ -268,20 +285,27 @@ def cmd_export(args, db_manager, config):
                     ]
                 )
 
-        logger.info(f"✓ Successfully exported transactions to: {output_path}")
-
     except Exception as e:
         logger.error(f"Error exporting transactions: {e}")
         sys.exit(1)
 
+    logger.info(f"✓ Successfully exported transactions to: {output_path}")
+    output.record(
+        ExportResultOutput(
+            total_exported=len(transactions),
+            output_path=str(output_path),
+        )
+    )
 
-def cmd_update_from_csv(args, db_manager, config):
+
+def cmd_update_from_csv(args, db_manager, config, output):
     """Update transactions from a CSV file.
 
     Args:
         args: Parsed command-line arguments
         db_manager: Database manager instance
         config: Application configuration
+        output: OutputWriter for typed data output
     """
     csv_path = Path(args.input)
     if not csv_path.exists():
@@ -306,25 +330,28 @@ def cmd_update_from_csv(args, db_manager, config):
         logger.info("No updates needed.")
         return
 
-    logger.info(f"\nUpdating {result['total_updated']} transaction(s)...")
-    logger.info(f"  Category manual updates: {result['category_updated']}")
-    logger.info(f"  Category auto-accepted: {result['category_auto_accepted']}")
-    logger.info(f"  Merchant manual updates: {result['merchant_updated']}")
-    logger.info(f"  Merchant auto-accepted: {result['merchant_auto_accepted']}")
-    logger.info(f"  Amortization updates: {result['amortization_updated']}")
-    if result["skipped"] > 0:
-        logger.info(f"  Skipped: {result['skipped']}")
+    logger.info(f"✓ Successfully updated {result['total_updated']} transaction(s)")
+    output.record(
+        UpdateFromCsvOutput(
+            total_updated=result["total_updated"],
+            category_updated=result["category_updated"],
+            category_auto_accepted=result["category_auto_accepted"],
+            merchant_updated=result["merchant_updated"],
+            merchant_auto_accepted=result["merchant_auto_accepted"],
+            amortization_updated=result["amortization_updated"],
+            skipped=result["skipped"],
+        )
+    )
 
-    logger.info(f"\n✓ Successfully updated {result['total_updated']} transaction(s)")
 
-
-def cmd_set_amortization(args, db_manager, config):
+def cmd_set_amortization(args, db_manager, config, output):
     """Set amortization for a transaction.
 
     Args:
         args: Parsed command-line arguments with transaction_id and months
         db_manager: Database manager instance
         config: Application configuration
+        output: OutputWriter for typed data output
     """
     from dateutil.relativedelta import relativedelta
 
@@ -363,19 +390,14 @@ def cmd_set_amortization(args, db_manager, config):
         if not success:
             logger.error("Failed to update transaction.")
             sys.exit(1)
-
-        logger.info("✓ Transaction amortization set successfully")
-        logger.info(f"  Transaction: {transaction.description[:50]}...")
-        logger.info(f"  Amount: ${transaction.amount / 100:.2f}")
-        logger.info(f"  Amortize months: {months}")
-        logger.info(
-            f"  Amortization period: {transaction.transaction_date.isoformat()} to {amortize_end_date.isoformat()}"
-        )
-        logger.info(f"  Monthly amount: ${transaction.amount / months / 100:.2f}")
-
+    except SystemExit:
+        raise
     except Exception as e:
         logger.error(f"Error updating transaction: {e}")
         sys.exit(1)
+
+    logger.info("✓ Transaction amortization set successfully")
+    output.record(transaction)
 
 
 def setup_parser(subparsers):

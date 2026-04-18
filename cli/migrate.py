@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from cli.outputs import MigrationStatusOutput, MigrationStatusRow
 from logger import get_logger
 
 logger = get_logger()
@@ -55,7 +56,7 @@ def apply_migration(conn, migration_file, db_manager):
         raise
 
 
-def cmd_status(args, db_manager):
+def cmd_status(args, db_manager, output):
     """Show migration status."""
     db_path = db_manager.get_db_path()
 
@@ -70,24 +71,30 @@ def cmd_status(args, db_manager):
         applied = get_applied_migrations(conn)
         available = get_available_migrations(db_manager)
 
-        logger.info("Migration Status:")
-        logger.info("================")
-
         if not available:
             logger.info("No migrations found.")
             return
 
-        for migration in available:
-            status_text = "APPLIED" if migration in applied else "PENDING"
-            logger.info(f"{migration}: {status_text}")
+        rows = [
+            MigrationStatusRow(
+                migration_file=m,
+                status="APPLIED" if m in applied else "PENDING",
+            )
+            for m in available
+        ]
+        pending_count = sum(1 for r in rows if r.status == "PENDING")
 
-        pending_count = len([m for m in available if m not in applied])
-        logger.info(f"\nTotal migrations: {len(available)}")
-        logger.info(f"Applied: {len(applied)}")
-        logger.info(f"Pending: {pending_count}")
+        output.record(
+            MigrationStatusOutput(
+                migrations=rows,
+                total=len(available),
+                applied=len(applied),
+                pending=pending_count,
+            )
+        )
 
 
-def cmd_apply(args, db_manager):
+def cmd_apply(args, db_manager, output):
     """Apply pending migrations."""
     with db_manager.connect() as conn:
         init_schema_migrations_table(conn)

@@ -3,13 +3,14 @@
 import sys
 import json
 from pathlib import Path
+from cli.outputs import SeedResultOutput
 from logger import get_logger
 from repositories.categories import CategoryRepository
 
 logger = get_logger()
 
 
-def cmd_list(args, db_manager, config):
+def cmd_list(args, db_manager, config, output):
     """List all categories in the database."""
     categories_repo = CategoryRepository(db_manager)
     categories = categories_repo.find_all()
@@ -18,23 +19,10 @@ def cmd_list(args, db_manager, config):
         logger.info("No categories found.")
         return
 
-    logger.info("\nCategories:")
-    logger.info("=" * 80)
-    for category in categories:
-        logger.info(f"ID: {category.id}")
-        logger.info(f"Name: {category.name}")
-        if category.description:
-            logger.info(f"Description: {category.description}")
-        if category.parent_id:
-            parent = categories_repo.find(category.parent_id)
-            parent_name = parent.name if parent else "Unknown"
-            logger.info(f"Parent: {parent_name} (ID: {category.parent_id})")
-        logger.info("-" * 80)
-
-    logger.info(f"\nTotal categories: {len(categories)}")
+    output.collection(categories, title="Categories")
 
 
-def cmd_create(args, db_manager, config):
+def cmd_create(args, db_manager, config, output):
     """Interactively create a new category."""
     categories_repo = CategoryRepository(db_manager)
 
@@ -70,20 +58,15 @@ def cmd_create(args, db_manager, config):
     # Create category via service
     try:
         category = categories_repo.create(name, description, parent_id)
-
-        logger.info(f"\n✓ Category created successfully with ID: {category.id}")
-        logger.info(f"  Name: {category.name}")
-        if category.description:
-            logger.info(f"  Description: {category.description}")
-        if category.parent_id:
-            logger.info(f"  Parent ID: {category.parent_id}")
-
     except Exception as e:
         logger.error(f"Error creating category: {e}")
         sys.exit(1)
 
+    logger.info(f"✓ Category created successfully with ID: {category.id}")
+    output.record(category)
 
-def cmd_delete(args, db_manager, config):
+
+def cmd_delete(args, db_manager, config, output):
     """Delete a category by ID."""
     categories_repo = CategoryRepository(db_manager)
     category_id = args.category_id
@@ -95,11 +78,11 @@ def cmd_delete(args, db_manager, config):
         sys.exit(1)
 
     # Confirm deletion
-    logger.info("\nCategory to delete:")
-    logger.info(f"  ID: {category.id}")
-    logger.info(f"  Name: {category.name}")
+    print("\nCategory to delete:")
+    print(f"  ID: {category.id}")
+    print(f"  Name: {category.name}")
     if category.description:
-        logger.info(f"  Description: {category.description}")
+        print(f"  Description: {category.description}")
 
     confirm = (
         input("\nAre you sure you want to delete this category? (yes/no): ")
@@ -122,7 +105,7 @@ def cmd_delete(args, db_manager, config):
         sys.exit(1)
 
 
-def cmd_seed(args, db_manager, config):
+def cmd_seed(args, db_manager, config, output):
     """Seed categories from JSON file."""
     categories_repo = CategoryRepository(db_manager)
 
@@ -144,8 +127,7 @@ def cmd_seed(args, db_manager, config):
         logger.error(f"Error reading seed file: {e}")
         sys.exit(1)
 
-    logger.info("\nSeeding categories from db/seed/categories.json")
-    logger.info("=" * 80)
+    logger.info("Seeding categories from db/seed/categories.json")
 
     created_count = 0
     skipped_count = 0
@@ -208,11 +190,14 @@ def cmd_seed(args, db_manager, config):
                     )
                     continue
 
-    logger.info("=" * 80)
-    logger.info("\nSeeding complete!")
-    logger.info(f"Created: {created_count}")
-    logger.info(f"Skipped: {skipped_count}")
-    logger.info(f"Total: {created_count + skipped_count}")
+    logger.info("Seeding complete.")
+    output.record(
+        SeedResultOutput(
+            created=created_count,
+            skipped=skipped_count,
+            total=created_count + skipped_count,
+        )
+    )
 
 
 def setup_parser(subparsers):
