@@ -82,13 +82,15 @@ class TestIngestCsv:
         assert result["parsed"] == 2
         assert result["inserted"] == 2
         assert result["skipped"] == 0
-        assert result["categorized"] == 0
+        assert "categorized" not in result
         assert result["data_import_id"] is not None
         assert result["archive_filename"] is None  # archiving disabled in test config
 
-        # Verify transactions are in DB
+        # Verify transactions are in DB, unreviewed and not auto-categorized
         transactions = services.transactions.find_by_account(account.id)
         assert len(transactions) == 2
+        assert all(t.import_reviewed is False for t in transactions)
+        assert all(t.auto_category_id is None for t in transactions)
 
     def test_ingest_empty_csv(self, services, tmp_path):
         """Test ingesting a CSV with no transactions."""
@@ -102,7 +104,7 @@ class TestIngestCsv:
         assert result["parsed"] == 0
         assert result["inserted"] == 0
         assert result["skipped"] == 0
-        assert result["categorized"] == 0
+        assert "categorized" not in result
 
     def test_ingest_deduplication(self, services, tmp_path):
         """Test that duplicate transactions are skipped on re-import."""

@@ -1,12 +1,16 @@
 <section>
   <h1 class="page-title">Review Import{% if account %} — {{ account.name }}{% endif %}</h1>
-  {% if result %}
+  {% if remaining is defined and remaining is not none %}
   <p class="text-sm text-gray-600 mb-4">
-    Imported {{ result.inserted }} transaction{{ 's' if result.inserted != 1 else '' }}
-    ({{ result.skipped }} duplicate{{ 's' if result.skipped != 1 else '' }} skipped,
-    {{ result.categorized }} auto-categorized).
-    Review and adjust categories and merchant names below, then click Save.
+    Reviewing batch — {{ reviewed }} of {{ total }} transaction{{ 's' if total != 1 else '' }} reviewed,
+    {{ remaining }} remaining.
+    Adjust categories and merchant names below, then click Save and continue.
   </p>
+  {% endif %}
+  {% if llm_failed %}
+  <div class="mb-4 px-3 py-2 rounded text-sm bg-amber-100 text-amber-800 border border-amber-200">
+    Auto-categorization is unavailable for this batch — please categorize manually.
+  </div>
   {% endif %}
   <form hx-post="/ui/imports/{{ data_import_id }}/review" hx-target="#content">
     <div class="section-card mb-4">
@@ -66,6 +70,6 @@
         </table>
       </div>
     </div>
-    <button type="submit" class="btn-primary">Save changes</button>
+    <button type="submit" class="btn-primary">Save and continue</button>
   </form>
 </section>

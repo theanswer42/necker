@@ -69,6 +69,24 @@ class DataImportRepository:
                 return self._row_to_data_import(row)
             return None
 
+    def find_all(self) -> List[DataImport]:
+        """Get all data imports across all accounts.
+
+        Returns:
+            List of DataImport objects ordered by created_at (newest first).
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                """
+                SELECT id, account_id, filename, created_at
+                FROM data_imports
+                ORDER BY created_at DESC, id DESC
+                """
+            )
+            rows = cursor.fetchall()
+
+            return [self._row_to_data_import(row) for row in rows]
+
     def find_by_account(self, account_id: int) -> List[DataImport]:
         """Get all data imports for a specific account.
 

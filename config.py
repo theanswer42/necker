@@ -27,6 +27,9 @@ class Config:
     llm_provider: str  # "openai", "ollama", etc.
     llm_openai_api_key: str
     llm_openai_model: str
+    # Number of transactions categorized per review batch. Keeps each LLM call
+    # under token limits and the review UI to a manageable page size.
+    llm_categorization_batch_size: int = 50
     # Web settings
     secret_key: str = field(default_factory=lambda: secrets.token_hex(32))
 
@@ -111,6 +114,7 @@ def load_config() -> Config:
     openai_config = llm_config.get("openai", {})
     llm_openai_api_key = openai_config.get("api_key", "")
     llm_openai_model = openai_config.get("model", "gpt-4o-mini")
+    llm_categorization_batch_size = llm_config.get("categorization_batch_size", 50)
 
     web_config = data.get("web", {})
     secret_key = web_config.get("secret_key", "")
@@ -128,6 +132,7 @@ def load_config() -> Config:
         llm_provider=llm_provider,
         llm_openai_api_key=llm_openai_api_key,
         llm_openai_model=llm_openai_model,
+        llm_categorization_batch_size=llm_categorization_batch_size,
         secret_key=secret_key if secret_key else secrets.token_hex(32),
     )
 
@@ -168,6 +173,7 @@ def _write_config(config: Config) -> None:
         "llm": {
             "enabled": config.llm_enabled,
             "provider": config.llm_provider,
+            "categorization_batch_size": config.llm_categorization_batch_size,
             "openai": {
                 "api_key": config.llm_openai_api_key,
                 "model": config.llm_openai_model,

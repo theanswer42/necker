@@ -100,6 +100,24 @@ class TestCmdIngest:
             args, services.db_manager, services.config, output
         )  # should not raise or exit
 
+    def test_ingest_leaves_transactions_unreviewed(self, services, tmp_path, output):
+        from cli.outputs import IngestResultOutput
+
+        # ingest no longer reports a categorized count
+        assert "categorized" not in IngestResultOutput.__dataclass_fields__
+
+        services.accounts.create("acct", "bofa", "Test Account")
+        csv_path = _make_bofa_csv(
+            tmp_path, [["01/15/2024", "Coffee", "-5.00", "995.00"]]
+        )
+        args = Namespace(csv_file=str(csv_path), account_name="acct")
+        cmd_ingest(args, services.db_manager, services.config, output)
+
+        account = services.accounts.find_by_name("acct")
+        txns = services.transactions.find_by_account(account.id)
+        assert len(txns) == 1
+        assert txns[0].import_reviewed is False
+
 
 class TestCmdSetCategory:
     """Tests for cmd_set_category."""

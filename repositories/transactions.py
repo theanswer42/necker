@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 # SQL Query Constants
 _TRANSACTION_SELECT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
        description, bank_category, category_id, auto_category_id, merchant_name, auto_merchant_name,
-       amount, transaction_type, additional_metadata, amortize_months, amortize_end_date"""
+       amount, transaction_type, additional_metadata, amortize_months, amortize_end_date,
+       import_reviewed"""
 
 _TRANSACTION_INSERT_FIELDS = """id, account_id, data_import_id, transaction_date, post_date,
     description, bank_category, category_id, auto_category_id, merchant_name, auto_merchant_name,
-    amount, transaction_type, additional_metadata, amortize_months, amortize_end_date"""
+    amount, transaction_type, additional_metadata, amortize_months, amortize_end_date,
+    import_reviewed"""
 
 # Automatically generate placeholders from field count
 _TRANSACTION_INSERT_PLACEHOLDERS = (
@@ -81,6 +83,7 @@ class TransactionRepository:
                         if transaction.amortize_end_date
                         else None
                     ),
+                    transaction.import_reviewed,
                 ),
             )
             conn.commit()
@@ -154,6 +157,7 @@ class TransactionRepository:
                     else None,
                     t.amortize_months,
                     t.amortize_end_date.isoformat() if t.amortize_end_date else None,
+                    t.import_reviewed,
                 )
                 for t in transactions
             ]
@@ -203,6 +207,7 @@ class TransactionRepository:
             "auto_merchant_name",
             "amortize_months",
             "amortize_end_date",
+            "import_reviewed",
         }
         invalid_fields = set(field_names) - supported_fields
         if invalid_fields:
@@ -303,6 +308,70 @@ class TransactionRepository:
             )
             rows = cursor.fetchall()
             return [self._row_to_transaction(row) for row in rows]
+
+    def find_next_unreviewed_batch(
+        self, data_import_id: int, limit: int
+    ) -> List[Transaction]:
+        """Return the next batch of unreviewed transactions for a data import.
+
+        Args:
+            data_import_id: The data import ID to filter by.
+            limit: Maximum number of transactions to return.
+
+        Returns:
+            List of Transaction objects with import_reviewed = 0, ordered by
+            transaction_date ascending then id, capped at ``limit``. Empty list
+            if no unreviewed transactions remain.
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                f"""
+                SELECT {_TRANSACTION_SELECT_FIELDS}
+                FROM transactions
+                WHERE data_import_id = ? AND import_reviewed = 0
+                ORDER BY transaction_date ASC, id
+                LIMIT ?
+                """,
+                (data_import_id, limit),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_transaction(row) for row in rows]
+
+    def count_unreviewed(self, data_import_id: int) -> int:
+        """Count unreviewed transactions for a data import.
+
+        Args:
+            data_import_id: The data import ID to filter by.
+
+        Returns:
+            Number of transactions with import_reviewed = 0.
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM transactions
+                WHERE data_import_id = ? AND import_reviewed = 0
+                """,
+                (data_import_id,),
+            )
+            return cursor.fetchone()[0]
+
+    def count_by_data_import(self, data_import_id: int) -> int:
+        """Count all transactions belonging to a data import.
+
+        Args:
+            data_import_id: The data import ID to filter by.
+
+        Returns:
+            Total number of transactions for the import (reviewed or not).
+        """
+        with self.db_manager.connect() as conn:
+            cursor = conn.execute(
+                "SELECT COUNT(*) FROM transactions WHERE data_import_id = ?",
+                (data_import_id,),
+            )
+            return cursor.fetchone()[0]
 
     def find_historical_for_categorization(
         self, account_id: int, limit: int = 200
@@ -557,4 +626,5 @@ class TransactionRepository:
             auto_merchant_name=row[10],
             amortize_months=row[14],
             amortize_end_date=date.fromisoformat(row[15]) if row[15] else None,
+            import_reviewed=bool(row[16]),
         )

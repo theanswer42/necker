@@ -1,0 +1,57 @@
+{% from "macros/flash.html" import flash %}
+
+{% if flash_message %}
+  {{ flash(flash_kind, flash_message) }}
+{% endif %}
+
+<section>
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="page-title mb-0">Imports</h1>
+    <button hx-get="/ui/imports/new" hx-target="#content" hx-push-url="true" class="btn-primary">
+      Import transactions
+    </button>
+  </div>
+  {% if rows %}
+  <div class="section-card">
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>File</th>
+            <th>Created</th>
+            <th>Progress</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="font-medium">{{ row.account_name }}</td>
+            <td class="text-gray-600 max-w-xs truncate">{{ row['import'].filename or '—' }}</td>
+            <td class="whitespace-nowrap text-gray-600">
+              {{ row['import'].created_at.strftime('%Y-%m-%d %H:%M') }}
+            </td>
+            <td class="whitespace-nowrap text-gray-600 tabular-nums">
+              {{ row.reviewed }} of {{ row.total }} reviewed
+            </td>
+            <td class="text-right">
+              {% if row.unreviewed > 0 %}
+              <a hx-get="/ui/imports/{{ row['import'].id }}/review" hx-target="#content" hx-push-url="true"
+                 class="btn-primary cursor-pointer">
+                Continue review
+              </a>
+              {% else %}
+              <span class="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">Complete</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-gray-500 text-sm">No imports yet.</p>
+  {% endif %}
+</section>

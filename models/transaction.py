@@ -26,6 +26,7 @@ class Transaction:
     amortize_end_date: Optional[date] = field(
         default=None, metadata={"cli_format": "iso_date"}
     )
+    import_reviewed: bool = False  # True once verified via the per-import review flow
     accrued: bool = (
         False  # runtime-only flag indicating this is a virtual accrued transaction
     )

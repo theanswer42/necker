@@ -7,7 +7,10 @@ from unittest.mock import MagicMock, patch
 from models.category import Category
 from models.transaction import Transaction
 from llm.providers.base import CategorySuggestion
-from services.categorization import auto_categorize
+from services.categorization import (
+    auto_categorize,
+    auto_categorize_for_import_batch,
+)
 
 
 def _make_transaction(description="Coffee", amount=500, account_id=1):
@@ -221,3 +224,103 @@ class TestAutoCategorizeSuccess:
             result = auto_categorize(transactions, [category], [], config=config)
 
         assert result is transactions
+
+
+def _persisted_transaction(
+    services, account, data_import, raw_suffix, txn_date=None, auto_category_id=None
+):
+    t = Transaction.create_with_checksum(
+        raw_data=f"batch_row_{raw_suffix}",
+        account_id=account.id,
+        transaction_date=txn_date or date(2024, 1, 15),
+        post_date=None,
+        description=f"Txn {raw_suffix}",
+        bank_category=None,
+        amount=500,
+        transaction_type="expense",
+    )
+    t.data_import_id = data_import.id
+    services.transactions.create(t)
+    if auto_category_id is not None:
+        t.auto_category_id = auto_category_id
+        services.transactions.update(t, ["auto_category_id"])
+    return t
+
+
+class TestAutoCategorizeForImportBatch:
+    """Tests for the per-import-batch categorization wrapper."""
+
+    def test_returns_empty_when_no_unreviewed(self, services):
+        account = services.accounts.create("acct", "bofa", "Acct")
+        di = services.data_imports.create(account.id, None)
+        load = auto_categorize_for_import_batch(
+            services.db_manager, services.config, di.id, 50
+        )
+        assert load.transactions == []
+        assert load.llm_failed is False
+
+    def test_llm_disabled_returns_batch_unchanged(self, services):
+        services.config.llm_enabled = False
+        account = services.accounts.create("acct", "bofa", "Acct")
+        di = services.data_imports.create(account.id, None)
+        _persisted_transaction(services, account, di, "1")
+
+        load = auto_categorize_for_import_batch(
+            services.db_manager, services.config, di.id, 50
+        )
+        assert len(load.transactions) == 1
+        assert load.transactions[0].auto_category_id is None
+        assert load.llm_failed is False
+
+    def test_only_sends_rows_missing_auto_category(self, services):
+        services.config.llm_enabled = True
+        account = services.accounts.create("acct", "bofa", "Acct")
+        category = services.categories.create("Food", "Food expenses")
+        di = services.data_imports.create(account.id, None)
+        with_auto = _persisted_transaction(
+            services, account, di, "has", auto_category_id=category.id
+        )
+        missing = _persisted_transaction(services, account, di, "missing")
+
+        mock_provider = MagicMock()
+        mock_provider.categorize_transactions.return_value = [
+            CategorySuggestion(
+                transaction_id=missing.id, category_id=category.id, merchant_name=None
+            )
+        ]
+        with patch(
+            "services.categorization.get_llm_provider", return_value=mock_provider
+        ):
+            load = auto_categorize_for_import_batch(
+                services.db_manager, services.config, di.id, 50
+            )
+
+        # Only the row missing a suggestion was sent to the LLM.
+        sent = mock_provider.categorize_transactions.call_args[0][0]
+        assert [t.id for t in sent] == [missing.id]
+
+        # The new suggestion was persisted; the pre-set one is untouched.
+        refreshed = {t.id: t for t in load.transactions}
+        assert refreshed[missing.id].auto_category_id == category.id
+        assert refreshed[with_auto.id].auto_category_id == category.id
+        assert load.llm_failed is False
+
+    def test_provider_init_failure_flags_llm_failed(self, services):
+        services.config.llm_enabled = True
+        account = services.accounts.create("acct", "bofa", "Acct")
+        services.categories.create("Food", "Food expenses")
+        di = services.data_imports.create(account.id, None)
+        txn = _persisted_transaction(services, account, di, "1")
+
+        with patch(
+            "services.categorization.get_llm_provider",
+            side_effect=Exception("bad api key"),
+        ):
+            load = auto_categorize_for_import_batch(
+                services.db_manager, services.config, di.id, 50
+            )
+
+        assert load.llm_failed is True
+        assert len(load.transactions) == 1
+        assert load.transactions[0].id == txn.id
+        assert load.transactions[0].auto_category_id is None

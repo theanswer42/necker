@@ -13,11 +13,14 @@ from models.account import Account
 from repositories.categories import CategoryRepository
 from repositories.data_imports import DataImportRepository
 from repositories.transactions import TransactionRepository
-from services.categorization import auto_categorize
 
 
 class IngestionService:
-    """Handles CSV import, archiving, and auto-categorization."""
+    """Handles CSV import and archiving.
+
+    Ingestion is insert-only: auto-categorization happens later, per-batch,
+    during the web review flow (see ``services.categorization``).
+    """
 
     def __init__(self, db_manager, config: Config):
         self.config = config
@@ -29,7 +32,9 @@ class IngestionService:
         """Ingest transactions from a CSV file for an account.
 
         Handles ingestion module lookup, CSV parsing, optional archiving,
-        DataImport record creation, bulk insert, and auto-categorization.
+        DataImport record creation, and bulk insert. Inserted transactions
+        start unreviewed (import_reviewed = 0) and are auto-categorized later
+        in user-facing batches via the review flow.
 
         Args:
             csv_path: Path to the CSV file to ingest.
@@ -40,7 +45,8 @@ class IngestionService:
             - "parsed": number of transactions parsed from CSV
             - "inserted": number of transactions inserted into DB
             - "skipped": number of duplicate transactions skipped
-            - "categorized": number of transactions auto-categorized
+            - "data_import_id": id of the created DataImport (None if nothing parsed)
+            - "archive_filename": archived CSV filename (None if archiving disabled)
 
         Raises:
             ValueError: If no ingestion module is found for the account type.
@@ -54,7 +60,13 @@ class IngestionService:
         parsed_count = len(transactions)
 
         if not transactions:
-            return {"parsed": 0, "inserted": 0, "skipped": 0, "categorized": 0}
+            return {
+                "parsed": 0,
+                "inserted": 0,
+                "skipped": 0,
+                "data_import_id": None,
+                "archive_filename": None,
+            }
 
         # Archive the CSV file if enabled
         archive_filename = None
@@ -72,35 +84,14 @@ class IngestionService:
         for transaction in transactions:
             transaction.data_import_id = data_import.id
 
-        # Bulk insert
+        # Bulk insert (unreviewed; categorization is deferred to the review flow)
         inserted_count = self.transactions.bulk_create(transactions)
         skipped_count = parsed_count - inserted_count
-
-        # Auto-categorize newly inserted transactions
-        categorized_count = 0
-        if inserted_count > 0:
-            historical = self.transactions.find_historical_for_categorization(
-                account.id, limit=200
-            )
-            categories = self.categories.find_all()
-            categorized_transactions = auto_categorize(
-                transactions, categories, historical, self.config
-            )
-            to_update = [
-                t
-                for t in categorized_transactions
-                if t.auto_category_id is not None or t.auto_merchant_name is not None
-            ]
-            if to_update:
-                categorized_count = self.transactions.batch_update(
-                    to_update, ["auto_category_id", "auto_merchant_name"]
-                )
 
         return {
             "parsed": parsed_count,
             "inserted": inserted_count,
             "skipped": skipped_count,
-            "categorized": categorized_count,
             "data_import_id": data_import.id,
             "archive_filename": archive_filename,
         }

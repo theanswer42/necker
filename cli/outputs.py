@@ -14,7 +14,6 @@ class IngestResultOutput:
     parsed: int
     inserted: int
     skipped: int
-    categorized: int
     data_import_id: int
     archive_path: Optional[str] = None
 
