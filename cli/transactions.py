@@ -61,10 +61,9 @@ def cmd_ingest(args, db_manager, config, output):
     if result["skipped"] > 0:
         logger.info(f"  ({result['skipped']} duplicate transaction(s) skipped)")
     if result["inserted"] > 0:
-        if result["categorized"] > 0:
-            logger.info(f"✓ Auto-categorized {result['categorized']} transaction(s)")
-        else:
-            logger.info("No transactions were auto-categorized")
+        logger.info(
+            f"Review and categorize at /ui/imports/{result['data_import_id']}/review"
+        )
 
     archive_path = (
         str(config.archive_dir / result["archive_filename"])
@@ -77,7 +76,6 @@ def cmd_ingest(args, db_manager, config, output):
             parsed=result["parsed"],
             inserted=result["inserted"],
             skipped=result["skipped"],
-            categorized=result["categorized"],
             data_import_id=result["data_import_id"],
             archive_path=archive_path,
         )

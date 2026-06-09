@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 from datetime import date
 
 import pytest
@@ -331,7 +332,7 @@ class TestImportUI:
         )
         assert resp.status_code == 404
 
-    def test_import_upload_valid_csv_returns_review(self, client, account):
+    def test_import_upload_valid_csv_redirects_to_review(self, client, account):
         csv_bytes = _make_bofa_csv_bytes(
             [
                 ["01/15/2024", "Coffee Shop", "-5.00", "995.00"],
@@ -346,11 +347,33 @@ class TestImportUI:
             },
             content_type="multipart/form-data",
         )
+        # New transactions hand off to the batched review flow via HX-Location.
         assert resp.status_code == 200
-        html = resp.data.decode()
+        location = json.loads(resp.headers["HX-Location"])
+        assert location["path"].endswith("/review")
+        assert location["target"] == "#content"
+
+    def test_import_review_get_renders_batch(self, client, account):
+        csv_bytes = _make_bofa_csv_bytes(
+            [
+                ["01/15/2024", "Coffee Shop", "-5.00", "995.00"],
+                ["01/20/2024", "Salary", "2000.00", "2995.00"],
+            ]
+        )
+        client.post(
+            "/ui/imports",
+            data={
+                "account_id": str(account.id),
+                "csv_file": (io.BytesIO(csv_bytes), "test.csv"),
+            },
+            content_type="multipart/form-data",
+        )
+        import_id = DataImportRepository(client.application.db_manager).find_all()[0].id
+        html = client.get(f"/ui/imports/{import_id}/review").data.decode()
         assert "Review Import" in html
         assert "Coffee Shop" in html
         assert "Salary" in html
+        assert "remaining" in html
 
     def test_import_upload_valid_csv_inserts_transactions(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(
@@ -436,12 +459,19 @@ class TestImportUI:
             },
             content_type="application/x-www-form-urlencoded",
         )
+        # Saving a batch advances to the next batch via HX-Location.
         assert resp.status_code == 200
-        assert "Import Complete" in resp.data.decode()
+        location = json.loads(resp.headers["HX-Location"])
+        assert location["path"] == f"/ui/imports/{data_import_id}/review"
 
-        # Verify merchant was saved
+        # Verify merchant saved and the transaction is now marked reviewed.
         updated = repos.transactions.find(txns[0].id)
         assert updated.merchant_name == "Starbucks"
+        assert updated.import_reviewed is True
+
+        # The next GET shows the completion view (nothing left to review).
+        complete = client.get(f"/ui/imports/{data_import_id}/review").data.decode()
+        assert "Review Complete" in complete
 
     def test_import_review_invalid_category_returns_400(self, client, repos, account):
         csv_bytes = _make_bofa_csv_bytes(
@@ -507,3 +537,101 @@ class TestImportUI:
 
         updated = repos.transactions.find(txns[0].id)
         assert updated.category_id == category.id
+
+
+def _insert_unreviewed(repos, account, data_import, n):
+    """Insert n unreviewed transactions for an import; return them in date order."""
+    created = []
+    for i in range(n):
+        t = Transaction.create_with_checksum(
+            raw_data=f"batchflow-{data_import.id}-{i}",
+            account_id=account.id,
+            transaction_date=date(2025, 1, 1 + i),
+            post_date=None,
+            description=f"Txn {i}",
+            bank_category=None,
+            amount=1000 + i,
+            transaction_type="expense",
+        )
+        t.data_import_id = data_import.id
+        repos.transactions.create(t)
+        created.append(t)
+    return created
+
+
+class TestImportsListUI:
+    def test_imports_list_returns_200(self, client):
+        assert client.get("/ui/imports").status_code == 200
+
+    def test_imports_list_empty_state(self, client):
+        assert "No imports yet" in client.get("/ui/imports").data.decode()
+
+    def test_imports_list_shows_progress_and_continue(
+        self, client, repos, account, data_import
+    ):
+        _insert_unreviewed(repos, account, data_import, 3)
+        html = client.get("/ui/imports").data.decode()
+        assert account.name in html
+        assert "0 of 3 reviewed" in html
+        assert "Continue review" in html
+
+    def test_imports_list_marks_complete(self, client, repos, account, data_import):
+        txns = _insert_unreviewed(repos, account, data_import, 1)
+        txns[0].import_reviewed = True
+        repos.transactions.batch_update(txns, ["import_reviewed"])
+        html = client.get("/ui/imports").data.decode()
+        assert "1 of 1 reviewed" in html
+        assert "Complete" in html
+
+
+class TestImportReviewBatchFlow:
+    def test_get_unknown_import_returns_404(self, client):
+        assert client.get("/ui/imports/99999/review").status_code == 404
+
+    def test_get_complete_when_nothing_unreviewed(
+        self, client, repos, account, data_import
+    ):
+        txns = _insert_unreviewed(repos, account, data_import, 1)
+        txns[0].import_reviewed = True
+        repos.transactions.batch_update(txns, ["import_reviewed"])
+        html = client.get(f"/ui/imports/{data_import.id}/review").data.decode()
+        assert "Review Complete" in html
+
+    def test_walks_multiple_batches_to_completion(
+        self, client, repos, account, data_import
+    ):
+        # 5 transactions, batch size 2 → 3 batches.
+        client.application.config["NECKER_CONFIG"].llm_categorization_batch_size = 2
+        _insert_unreviewed(repos, account, data_import, 5)
+
+        review_url = f"/ui/imports/{data_import.id}/review"
+        batches_seen = 0
+        for _ in range(10):  # generous upper bound to avoid an infinite loop
+            if repos.transactions.count_unreviewed(data_import.id) == 0:
+                break
+            html = client.get(review_url).data.decode()
+            assert "Review Import" in html
+            batches_seen += 1
+
+            # Submit only the rows in the current batch.
+            batch = repos.transactions.find_next_unreviewed_batch(data_import.id, 2)
+            assert 1 <= len(batch) <= 2
+            form = {}
+            for t in batch:
+                form[f"category_id_{t.id}"] = ""
+                form[f"merchant_name_{t.id}"] = ""
+            resp = client.post(
+                review_url,
+                data=form,
+                content_type="application/x-www-form-urlencoded",
+            )
+            location = json.loads(resp.headers["HX-Location"])
+            assert location["path"] == review_url
+
+        assert batches_seen == 3
+        assert repos.transactions.count_unreviewed(data_import.id) == 0
+        for t in repos.transactions.find_by_data_import_id(data_import.id):
+            assert t.import_reviewed is True
+
+        # Final GET shows the completion view.
+        assert "Review Complete" in client.get(review_url).data.decode()

@@ -1,16 +1,18 @@
 """UI route definitions — server-rendered HTML fragments for htmx."""
 
+import json
 import sqlite3
 import tempfile
 from datetime import date
 from pathlib import Path
 
-from flask import render_template, request, current_app
+from flask import render_template, request, current_app, make_response
 
 from app.ui import ui_bp
 from repositories.accounts import AccountRepository
 from repositories.budgets import BudgetRepository
 from repositories.categories import CategoryRepository
+from repositories.data_imports import DataImportRepository
 from repositories.transactions import TransactionRepository
 from reports.accrual_spending_summary import AccrualSpendingSummaryReport
 from reports.cash_spending_summary import CashSpendingSummaryReport
@@ -154,6 +156,42 @@ def import_form():
     )
 
 
+def _hx_location_response(path: str):
+    """Return an empty response that tells htmx to navigate to ``path``.
+
+    Uses the ``HX-Location`` header (client-side navigation) rather than
+    ``HX-Redirect`` (full page reload) so the app shell stays intact and the
+    fragment is swapped into ``#content``.
+    """
+    resp = make_response("", 200)
+    resp.headers["HX-Location"] = json.dumps({"path": path, "target": "#content"})
+    return resp
+
+
+@ui_bp.route("/imports")
+def imports_list():
+    db = current_app.db_manager
+    imports = DataImportRepository(db).find_all()
+    account_names = {a.id: a.name for a in AccountRepository(db).find_all()}
+    transactions_repo = TransactionRepository(db)
+
+    rows = []
+    for imp in imports:
+        total = transactions_repo.count_by_data_import(imp.id)
+        unreviewed = transactions_repo.count_unreviewed(imp.id)
+        rows.append(
+            {
+                "import": imp,
+                "account_name": account_names.get(imp.account_id, "—"),
+                "total": total,
+                "reviewed": total - unreviewed,
+                "unreviewed": unreviewed,
+            }
+        )
+
+    return render_template("fragments/import_list.html", rows=rows)
+
+
 @ui_bp.route("/imports", methods=["POST"])
 def import_upload():
     from services.ingestion import IngestionService
@@ -236,7 +274,7 @@ def import_upload():
                 500,
             )
 
-    # If no new transactions, skip review
+    # If no new transactions, skip review entirely.
     if result["parsed"] == 0 or result["inserted"] == 0:
         return render_template(
             "fragments/import_success.html",
@@ -247,21 +285,72 @@ def import_upload():
             mode="upload",
         )
 
-    # Fetch just-imported transactions for review
-    transactions = TransactionRepository(current_app.db_manager).find_by_data_import_id(
-        result["data_import_id"]
+    # New transactions landed — hand off to the batched review flow.
+    return _hx_location_response(f"/ui/imports/{result['data_import_id']}/review")
+
+
+@ui_bp.route("/imports/<int:data_import_id>/review")
+def import_review_next(data_import_id):
+    """Load (and auto-categorize) the next unreviewed batch for an import."""
+    db = current_app.db_manager
+    data_import = DataImportRepository(db).find(data_import_id)
+    if data_import is None:
+        all_accounts = AccountRepository(db).find_all()
+        return (
+            render_template(
+                "fragments/import_form.html",
+                accounts=all_accounts,
+                error="Import not found.",
+                selected_account_id=None,
+            ),
+            404,
+        )
+
+    transactions_repo = TransactionRepository(db)
+    total = transactions_repo.count_by_data_import(data_import_id)
+    unreviewed = transactions_repo.count_unreviewed(data_import_id)
+    account = AccountRepository(db).find(data_import.account_id)
+
+    # Nothing left to review — show the completion view.
+    if unreviewed == 0:
+        transactions_url = None
+        month_str = None
+        if total > 0:
+            txns = transactions_repo.find_by_data_import_id(data_import_id)
+            earliest = min(t.transaction_date for t in txns)
+            month_str = f"{earliest.year:04d}/{earliest.month:02d}"
+            transactions_url = f"/ui/transactions?month={month_str}"
+        return render_template(
+            "fragments/import_success.html",
+            result=None,
+            account=account,
+            transactions_url=transactions_url,
+            month_str=month_str,
+            mode="review-complete",
+        )
+
+    config = current_app.config["NECKER_CONFIG"]
+    from services.categorization import auto_categorize_for_import_batch
+
+    load = auto_categorize_for_import_batch(
+        db, config, data_import_id, config.llm_categorization_batch_size
     )
-    all_categories = CategoryRepository(current_app.db_manager).find_all()
+
+    all_categories = CategoryRepository(db).find_all()
     categories_map = {c.id: c.name for c in all_categories}
 
     return render_template(
         "fragments/import_review.html",
-        transactions=transactions,
+        transactions=load.transactions,
         account=account,
         categories=all_categories,
         categories_map=categories_map,
-        result=result,
-        data_import_id=result["data_import_id"],
+        result=None,
+        data_import_id=data_import_id,
+        total=total,
+        reviewed=total - unreviewed,
+        remaining=unreviewed,
+        llm_failed=load.llm_failed,
         edits={},
         row_errors={},
     )
@@ -269,30 +358,43 @@ def import_upload():
 
 @ui_bp.route("/imports/<int:data_import_id>/review", methods=["POST"])
 def import_review(data_import_id):
-    transactions_repo = TransactionRepository(current_app.db_manager)
+    db = current_app.db_manager
+    transactions_repo = TransactionRepository(db)
 
-    transactions = transactions_repo.find_by_data_import_id(data_import_id)
-    if not transactions:
-        all_accounts = AccountRepository(current_app.db_manager).find_all()
+    data_import = DataImportRepository(db).find(data_import_id)
+    if data_import is None:
+        all_accounts = AccountRepository(db).find_all()
         return (
             render_template(
                 "fragments/import_form.html",
                 accounts=all_accounts,
-                error="No transactions found for this import.",
+                error="Import not found.",
                 selected_account_id=None,
             ),
             404,
         )
 
-    all_categories = CategoryRepository(current_app.db_manager).find_all()
+    all_categories = CategoryRepository(db).find_all()
     valid_category_ids = {c.id for c in all_categories}
     categories_map = {c.id: c.name for c in all_categories}
 
-    # Parse form data and validate
+    # The submitted form determines which transactions are in this batch.
+    submitted_ids = [
+        key[len("category_id_") :]
+        for key in request.form
+        if key.startswith("category_id_")
+    ]
+    batch = []
+    for txn_id in submitted_ids:
+        txn = transactions_repo.find(txn_id)
+        if txn is not None and txn.data_import_id == data_import_id:
+            batch.append(txn)
+    batch.sort(key=lambda t: (t.transaction_date, t.id))
+
+    # Parse and validate the submitted edits.
     edits = {}
     row_errors = {}
-
-    for txn in transactions:
+    for txn in batch:
         cat_val = request.form.get(f"category_id_{txn.id}", "").strip()
         merchant_val = request.form.get(f"merchant_name_{txn.id}", "").strip()
         edits[txn.id] = {"category_id": cat_val, "merchant_name": merchant_val}
@@ -308,47 +410,41 @@ def import_review(data_import_id):
                 row_errors.setdefault(txn.id, {})["category"] = "Invalid category."
 
     if row_errors:
-        account = AccountRepository(current_app.db_manager).find(
-            transactions[0].account_id
-        )
+        total = transactions_repo.count_by_data_import(data_import_id)
+        unreviewed = transactions_repo.count_unreviewed(data_import_id)
+        account = AccountRepository(db).find(data_import.account_id)
         return (
             render_template(
                 "fragments/import_review.html",
-                transactions=transactions,
+                transactions=batch,
                 account=account,
                 categories=all_categories,
                 categories_map=categories_map,
                 result=None,
                 data_import_id=data_import_id,
+                total=total,
+                reviewed=total - unreviewed,
+                remaining=unreviewed,
+                llm_failed=False,
                 edits=edits,
                 row_errors=row_errors,
             ),
             400,
         )
 
-    # Apply edits to transaction objects and batch update
-    for txn in transactions:
+    # Apply edits and mark the batch reviewed, then advance to the next batch.
+    for txn in batch:
         edit = edits[txn.id]
         txn.category_id = int(edit["category_id"]) if edit["category_id"] else None
         txn.merchant_name = edit["merchant_name"] or None
+        txn.import_reviewed = True
 
-    updated_count = transactions_repo.batch_update(
-        transactions, ["category_id", "merchant_name"]
-    )
+    if batch:
+        transactions_repo.batch_update(
+            batch, ["category_id", "merchant_name", "import_reviewed"]
+        )
 
-    earliest_date = min(t.transaction_date for t in transactions)
-    month_str = f"{earliest_date.year:04d}/{earliest_date.month:02d}"
-
-    return render_template(
-        "fragments/import_success.html",
-        result={"updated": updated_count},
-        account=None,
-        transactions_url=f"/ui/transactions?month={month_str}",
-        month_str=month_str,
-        mode="review",
-        flash_kind="success",
-        flash_message="Import saved.",
-    )
+    return _hx_location_response(f"/ui/imports/{data_import_id}/review")
 
 
 # --- Budgets ---
