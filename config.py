@@ -24,9 +24,11 @@ class Config:
     enable_reset: bool
     # LLM settings
     llm_enabled: bool
-    llm_provider: str  # "openai", "ollama", etc.
+    llm_provider: str  # "anthropic", "openai", etc.
     llm_openai_api_key: str
     llm_openai_model: str
+    llm_anthropic_api_key: str
+    llm_anthropic_model: str
     # Number of transactions categorized per review batch. Keeps each LLM call
     # under token limits and the review UI to a manageable page size.
     llm_categorization_batch_size: int = 50
@@ -53,9 +55,11 @@ class Config:
             archive_dir=base_dir / "archives",
             enable_reset=False,
             llm_enabled=False,
-            llm_provider="openai",
+            llm_provider="anthropic",
             llm_openai_api_key="",
             llm_openai_model="gpt-4o-mini",
+            llm_anthropic_api_key="",
+            llm_anthropic_model="claude-haiku-4-5",
         )
 
 
@@ -109,11 +113,15 @@ def load_config() -> Config:
 
     llm_config = data.get("llm", {})
     llm_enabled = llm_config.get("enabled", False)
-    llm_provider = llm_config.get("provider", "openai")
+    llm_provider = llm_config.get("provider", "anthropic")
 
     openai_config = llm_config.get("openai", {})
     llm_openai_api_key = openai_config.get("api_key", "")
     llm_openai_model = openai_config.get("model", "gpt-4o-mini")
+
+    anthropic_config = llm_config.get("anthropic", {})
+    llm_anthropic_api_key = anthropic_config.get("api_key", "")
+    llm_anthropic_model = anthropic_config.get("model", "claude-haiku-4-5")
     llm_categorization_batch_size = llm_config.get("categorization_batch_size", 50)
 
     web_config = data.get("web", {})
@@ -132,6 +140,8 @@ def load_config() -> Config:
         llm_provider=llm_provider,
         llm_openai_api_key=llm_openai_api_key,
         llm_openai_model=llm_openai_model,
+        llm_anthropic_api_key=llm_anthropic_api_key,
+        llm_anthropic_model=llm_anthropic_model,
         llm_categorization_batch_size=llm_categorization_batch_size,
         secret_key=secret_key if secret_key else secrets.token_hex(32),
     )
@@ -177,6 +187,10 @@ def _write_config(config: Config) -> None:
             "openai": {
                 "api_key": config.llm_openai_api_key,
                 "model": config.llm_openai_model,
+            },
+            "anthropic": {
+                "api_key": config.llm_anthropic_api_key,
+                "model": config.llm_anthropic_model,
             },
         },
         "web": {

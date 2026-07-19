@@ -61,6 +61,8 @@ def test_config(tmp_path):
         llm_provider="openai",
         llm_openai_api_key="",
         llm_openai_model="gpt-4o-mini",
+        llm_anthropic_api_key="",
+        llm_anthropic_model="claude-haiku-4-5",
     )
 
 
