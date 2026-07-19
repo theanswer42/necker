@@ -4,6 +4,7 @@ from typing import Optional
 from config import Config
 from llm.providers.base import LLMProvider
 from llm.providers.openai import OpenAIProvider
+from llm.providers.anthropic import AnthropicProvider
 from logger import get_logger
 
 logger = get_logger()
@@ -39,6 +40,18 @@ def get_llm_provider(config: Config) -> Optional[LLMProvider]:
         logger.info(f"Initializing OpenAI provider (model: {model or 'default'})")
 
         return OpenAIProvider(api_key=api_key, model=model)
+
+    elif provider_name == "anthropic":
+        api_key = getattr(config, "llm_anthropic_api_key", None)
+        if not api_key:
+            raise ValueError(
+                "Anthropic provider selected but llm_anthropic_api_key not configured"
+            )
+
+        model = getattr(config, "llm_anthropic_model", None)
+        logger.info(f"Initializing Anthropic provider (model: {model or 'default'})")
+
+        return AnthropicProvider(api_key=api_key, model=model)
 
     elif provider_name is None:
         logger.info("No LLM provider configured")
