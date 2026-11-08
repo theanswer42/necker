@@ -51,7 +51,7 @@ def transactions():
     if month_raw:
         try:
             year, month = _parse_month(month_raw)
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return render_template(
                 "fragments/transaction_list.html",
                 error=f"Invalid month format '{month_raw}'. Use YYYY/MM.",
@@ -620,7 +620,7 @@ def _report_request_params():
     if month_raw:
         try:
             year, month = _parse_month(month_raw)
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return (
                 None,
                 None,

@@ -54,7 +54,7 @@ def _parse_month(value: str, param_name: str):
         if not (1 <= month <= 12):
             raise ValueError
         return (year, month), None
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None, (
             jsonify(
                 {
