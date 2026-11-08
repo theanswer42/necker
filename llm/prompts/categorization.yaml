@@ -34,6 +34,6 @@ user_prompt_template: |
      If you cannot confidently identify a merchant, set merchant_name to null.
 
 parameters:
-  temperature: 0.1
+  temperature: 0.1  # OpenAI only; Anthropic API (2026-10-21+) rejects sampling params
   max_tokens: 4000
   model: "claude-haiku-4-5"
