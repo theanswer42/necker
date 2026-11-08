@@ -23,6 +23,10 @@ dev = [
     "ruff>=0.17.4,<0.18",
 ]
 
+[tool.uv]
+# CI (setup-uv) reads this too; bump deliberately via /deps-update.
+required-version = ">=0.13.7,<0.14"
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
