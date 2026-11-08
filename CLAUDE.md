@@ -8,7 +8,7 @@ Necker is a Python project that appears to be designed for processing financial 
 
 ## Development Setup
 
-This project uses `uv` as the Python package manager. The project requires Python 3.13 or higher.
+This project uses `uv` as the Python package manager. The project requires Python 3.14 or higher.
 
 ### Installation
 ```bash

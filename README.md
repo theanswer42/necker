@@ -21,7 +21,7 @@ Most of this project was built with Claude.
 
 ## Installation
 
-This project uses [uv](https://github.com/astral-sh/uv) as the Python package manager. Requires Python 3.13+.
+This project uses [uv](https://github.com/astral-sh/uv) as the Python package manager. Requires Python 3.14+.
 
 ```bash
 # Install dependencies
