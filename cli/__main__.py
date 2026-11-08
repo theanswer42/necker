@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Necker CLI - Unified command-line interface for managing accounts and transactions.
 
@@ -22,17 +21,18 @@ Examples:
     python -m cli backup /path/to/backup.db
 """
 
-import sys
 import argparse
+import sys
+
 from cli import (
     accounts,
-    transactions,
-    migrate,
-    categories,
-    server,
-    budgets,
     backup,
+    budgets,
+    categories,
+    migrate,
     reports,
+    server,
+    transactions,
 )
 from cli.output import OutputWriter, TextRenderer
 from config import load_config

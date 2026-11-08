@@ -1,10 +1,10 @@
 """Base provider interface for LLM implementations."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 from dataclasses import dataclass
-from models.transaction import Transaction
+
 from models.category import Category
+from models.transaction import Transaction
 
 
 @dataclass
@@ -12,10 +12,10 @@ class CategorySuggestion:
     """Represents a category suggestion for a transaction."""
 
     transaction_id: str
-    category_id: Optional[int]
-    merchant_name: Optional[str] = None  # Detected merchant name
-    confidence: Optional[float] = None  # 0.0 to 1.0, if provider supports it
-    reasoning: Optional[str] = None  # Why this category was chosen
+    category_id: int | None
+    merchant_name: str | None = None  # Detected merchant name
+    confidence: float | None = None  # 0.0 to 1.0, if provider supports it
+    reasoning: str | None = None  # Why this category was chosen
 
 
 class LLMProvider(ABC):
@@ -28,10 +28,10 @@ class LLMProvider(ABC):
     @abstractmethod
     def categorize_transactions(
         self,
-        transactions: List[Transaction],
-        categories: List[Category],
-        historical_transactions: List[Transaction],
-    ) -> List[CategorySuggestion]:
+        transactions: list[Transaction],
+        categories: list[Category],
+        historical_transactions: list[Transaction],
+    ) -> list[CategorySuggestion]:
         """Categorize a list of transactions using the LLM.
 
         Args:
@@ -47,4 +47,3 @@ class LLMProvider(ABC):
         Raises:
             Exception: If LLM API call fails.
         """
-        pass

@@ -1,7 +1,8 @@
 """Tests for the API blueprint routes."""
 
-import pytest
 from datetime import date
+
+import pytest
 
 from app.app import create_app
 from models.transaction import Transaction

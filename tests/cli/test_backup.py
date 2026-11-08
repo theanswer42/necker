@@ -1,13 +1,14 @@
 """Tests for CLI backup command."""
 
 import sqlite3
-import pytest
 from argparse import Namespace
 from pathlib import Path
 
+import pytest
+
+from cli.backup import cmd_backup
 from config import Config, get_migrations_dir
 from db.manager import DatabaseManager
-from cli.backup import cmd_backup
 from tests.helpers import run_migrations
 
 

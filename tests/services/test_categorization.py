@@ -3,10 +3,9 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-
+from llm.providers.base import CategorySuggestion
 from models.category import Category
 from models.transaction import Transaction
-from llm.providers.base import CategorySuggestion
 from services.categorization import (
     auto_categorize,
     auto_categorize_for_import_batch,

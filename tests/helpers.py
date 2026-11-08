@@ -1,7 +1,7 @@
 """Helper utilities for tests."""
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 
 def run_migrations(conn: sqlite3.Connection, migrations_dir: Path) -> None:

@@ -3,7 +3,6 @@
 import hashlib
 from datetime import date
 
-
 from models.transaction import Transaction
 
 
@@ -51,15 +50,15 @@ class TestCreateWithChecksum:
         assert t1.id == t2.id
 
     def test_different_raw_data_produces_different_id(self):
-        kwargs = dict(
-            account_id=1,
-            transaction_date=date(2024, 1, 15),
-            post_date=None,
-            description="Coffee",
-            bank_category=None,
-            amount=500,
-            transaction_type="expense",
-        )
+        kwargs = {
+            "account_id": 1,
+            "transaction_date": date(2024, 1, 15),
+            "post_date": None,
+            "description": "Coffee",
+            "bank_category": None,
+            "amount": 500,
+            "transaction_type": "expense",
+        }
         t1 = Transaction.create_with_checksum(raw_data="row_a", **kwargs)
         t2 = Transaction.create_with_checksum(raw_data="row_b", **kwargs)
         assert t1.id != t2.id

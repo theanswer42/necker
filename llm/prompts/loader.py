@@ -1,8 +1,10 @@
 """Prompt loading and management."""
 
-import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+
+import yaml
+
 from logger import get_logger
 
 logger = get_logger()
@@ -11,7 +13,7 @@ logger = get_logger()
 class PromptManager:
     """Manages loading and rendering of prompts from YAML files."""
 
-    def __init__(self, prompts_dir: Optional[Path] = None):
+    def __init__(self, prompts_dir: Path | None = None):
         """Initialize the prompt manager.
 
         Args:
@@ -24,9 +26,9 @@ class PromptManager:
         else:
             self.prompts_dir = prompts_dir
 
-        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
 
-    def load_prompt(self, prompt_name: str) -> Dict[str, Any]:
+    def load_prompt(self, prompt_name: str) -> dict[str, Any]:
         """Load a prompt configuration from YAML file.
 
         Args:
@@ -59,8 +61,8 @@ class PromptManager:
         return prompt_config
 
     def render_prompt(
-        self, prompt_name: str, variables: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, prompt_name: str, variables: dict[str, Any]
+    ) -> dict[str, Any]:
         """Load and render a prompt with the given variables.
 
         Args:

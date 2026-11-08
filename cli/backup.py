@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Backup the configured database to a user-provided path."""
 
 from pathlib import Path

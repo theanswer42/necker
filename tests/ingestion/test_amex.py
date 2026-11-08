@@ -1,8 +1,10 @@
 import io
-import pytest
 from datetime import date
+from decimal import InvalidOperation
 
-from ingestion.amex import row_to_transaction, ingest
+import pytest
+
+from ingestion.amex import ingest, row_to_transaction
 
 
 class TestRowToTransaction:
@@ -293,7 +295,7 @@ class TestRowToTransaction:
         ]
         account_id = 1
 
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidOperation):
             row_to_transaction(row, account_id)
 
     def test_checksum_consistency(self):

@@ -1,5 +1,6 @@
-import pytest
 import sqlite3
+
+import pytest
 
 
 class TestCategoryService:
@@ -168,7 +169,7 @@ class TestCategoryService:
 
     def test_update_nonexistent_category_raises_error(self, services):
         """Test that updating a non-existent category raises an error."""
-        with pytest.raises(Exception, match="Category with ID 9999 not found"):
+        with pytest.raises(LookupError, match="Category with ID 9999 not found"):
             services.categories.update(9999, "Name", "Description")
 
     def test_delete_category(self, services):

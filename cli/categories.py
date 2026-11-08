@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-
-import sys
 import json
+import sys
 from pathlib import Path
+
 from cli.outputs import SeedResultOutput
 from logger import get_logger
 from repositories.categories import CategoryRepository

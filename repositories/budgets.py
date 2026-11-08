@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from models.budget import Budget
 
 
@@ -7,7 +5,7 @@ class BudgetRepository:
     def __init__(self, db_manager):
         self.db_manager = db_manager
 
-    def find_all(self) -> List[Budget]:
+    def find_all(self) -> list[Budget]:
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
                 """
@@ -28,7 +26,7 @@ class BudgetRepository:
                 for row in cursor.fetchall()
             ]
 
-    def find(self, budget_id: int) -> Optional[Budget]:
+    def find(self, budget_id: int) -> Budget | None:
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
                 """
@@ -60,7 +58,7 @@ class BudgetRepository:
             budget_id = cursor.lastrowid
         return self.find(budget_id)
 
-    def update_amount(self, budget_id: int, amount: int) -> Optional[Budget]:
+    def update_amount(self, budget_id: int, amount: int) -> Budget | None:
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
                 "UPDATE budgets SET amount = ? WHERE id = ?",

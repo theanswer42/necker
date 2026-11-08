@@ -200,6 +200,7 @@ With appropriate HTTP status codes (400, 404, 422, 500).
 # app/app.py
 from flask import Flask
 
+
 def create_app():
     app = Flask(__name__)
 
@@ -223,10 +224,12 @@ from app.core.services import get_expenses, add_expense
 
 api_bp = Blueprint("api", __name__)
 
+
 @api_bp.route("/expenses")
 def list_expenses():
     category = request.args.get("category")
     return jsonify(get_expenses(category=category))
+
 
 @api_bp.route("/expenses", methods=["POST"])
 def create_expense():
@@ -242,10 +245,14 @@ from app.core.services import get_expenses, add_expense
 
 ui_bp = Blueprint("ui", __name__)
 
+
 @ui_bp.route("/expenses")
 def list_expenses():
     category = request.args.get("category")
-    return render_template("fragments/expense_list.html", expenses=get_expenses(category=category))
+    return render_template(
+        "fragments/expense_list.html", expenses=get_expenses(category=category)
+    )
+
 
 @ui_bp.route("/expenses", methods=["POST"])
 def create_expense():

@@ -1,8 +1,4 @@
-import ingestion.amex as amex
-import ingestion.bofa as bofa
-import ingestion.bofacc as bofacc
-import ingestion.chase as chase
-import ingestion.discover as discover
+from ingestion import amex, bofa, bofacc, chase, discover
 
 _INGESTION_MODULES = {
     "amex": amex,

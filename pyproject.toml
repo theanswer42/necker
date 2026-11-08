@@ -20,7 +20,7 @@ dev = [
     "pytest>=9.2.0,<10",
     "pytest-cov>=7.0.0,<8",
     "python-lsp-server>=1.13.1,<2",
-    "ruff>=0.14.2,<0.15",
+    "ruff>=0.17.4,<0.18",
 ]
 
 [tool.pytest.ini_options]
@@ -48,3 +48,9 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Interface layer: top-level handlers deliberately catch everything to log
+# the error and exit (CLI) or render it (web) instead of crashing.
+"cli/**" = ["BLE001"]
+"app/**" = ["BLE001"]

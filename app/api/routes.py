@@ -2,15 +2,15 @@
 
 import sqlite3
 
-from flask import jsonify, request, current_app
+from flask import current_app, jsonify, request
 
 from app.api import api_bp
+from reports.accrual_spending_summary import AccrualSpendingSummaryReport
+from reports.cash_spending_summary import CashSpendingSummaryReport
 from repositories.accounts import AccountRepository
 from repositories.budgets import BudgetRepository
 from repositories.categories import CategoryRepository
 from repositories.transactions import TransactionRepository
-from reports.accrual_spending_summary import AccrualSpendingSummaryReport
-from reports.cash_spending_summary import CashSpendingSummaryReport
 
 
 def _transaction_to_dict(t) -> dict:
@@ -54,7 +54,7 @@ def _parse_month(value: str, param_name: str):
         if not (1 <= month <= 12):
             raise ValueError
         return (year, month), None
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None, (
             jsonify(
                 {

@@ -1,7 +1,6 @@
+import hashlib
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional
-import hashlib
 
 
 @dataclass
@@ -9,21 +8,21 @@ class Transaction:
     id: str  # checksum of raw transaction data
     account_id: int
     transaction_date: date = field(metadata={"cli_format": "iso_date"})
-    post_date: Optional[date] = field(metadata={"cli_format": "iso_date"})
+    post_date: date | None = field(metadata={"cli_format": "iso_date"})
     description: str
-    bank_category: Optional[str]  # category from bank/CSV import
+    bank_category: str | None  # category from bank/CSV import
     amount: int = field(metadata={"cli_format": "cents_to_dollars"})
     transaction_type: str  # 'income', 'expense', or 'transfer'
-    additional_metadata: Optional[dict] = None
+    additional_metadata: dict | None = None
     data_import_id: int = (
         0  # reference to the data import operation (set during ingestion)
     )
-    category_id: Optional[int] = None  # user-defined category
-    auto_category_id: Optional[int] = None  # LLM-suggested category
-    merchant_name: Optional[str] = None  # user-defined merchant name
-    auto_merchant_name: Optional[str] = None  # LLM-suggested merchant name
-    amortize_months: Optional[int] = None  # number of months to amortize over
-    amortize_end_date: Optional[date] = field(
+    category_id: int | None = None  # user-defined category
+    auto_category_id: int | None = None  # LLM-suggested category
+    merchant_name: str | None = None  # user-defined merchant name
+    auto_merchant_name: str | None = None  # LLM-suggested merchant name
+    amortize_months: int | None = None  # number of months to amortize over
+    amortize_end_date: date | None = field(
         default=None, metadata={"cli_format": "iso_date"}
     )
     import_reviewed: bool = False  # True once verified via the per-import review flow
@@ -37,13 +36,13 @@ class Transaction:
         raw_data: str,
         account_id: int,
         transaction_date: date,
-        post_date: Optional[date],
+        post_date: date | None,
         description: str,
-        bank_category: Optional[str],
+        bank_category: str | None,
         amount: int,
         transaction_type: str,
-        additional_metadata: Optional[dict] = None,
-    ) -> "Transaction":
+        additional_metadata: dict | None = None,
+    ) -> Transaction:
         """Create a Transaction with auto-generated checksum ID.
 
         The ID is sha256(raw_data), where raw_data is the raw CSV row string.

@@ -7,12 +7,13 @@ categorized transactions and suggests categories for new transactions.
 Supports multiple LLM providers (OpenAI, Ollama) configured via the application config.
 """
 
-from typing import List, NamedTuple, Optional
-from models.transaction import Transaction
-from models.category import Category
+from typing import NamedTuple
+
 from config import Config
 from llm import get_llm_provider
 from logger import get_logger
+from models.category import Category
+from models.transaction import Transaction
 
 logger = get_logger()
 
@@ -29,16 +30,16 @@ class ImportBatchLoad(NamedTuple):
             LLM is simply disabled or no categorization was needed.
     """
 
-    transactions: List[Transaction]
+    transactions: list[Transaction]
     llm_failed: bool
 
 
 def auto_categorize(
-    transactions: List[Transaction],
-    categories: List[Category],
-    historical_transactions: List[Transaction],
-    config: Optional[Config] = None,
-) -> List[Transaction]:
+    transactions: list[Transaction],
+    categories: list[Category],
+    historical_transactions: list[Transaction],
+    config: Config | None = None,
+) -> list[Transaction]:
     """Automatically categorize transactions using an LLM.
 
     This function takes a list of uncategorized transactions and suggests
@@ -79,7 +80,7 @@ def auto_categorize(
     # Get LLM provider from config
     try:
         provider = get_llm_provider(config)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - LLM failures must not block ingestion
         logger.error(f"Failed to initialize LLM provider: {e}")
         return transactions
 
@@ -123,7 +124,7 @@ def auto_categorize(
             f"Successfully auto-categorized {categorized_count}/{len(transactions)} transactions"
         )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - LLM failures must not block ingestion
         logger.error(f"LLM categorization failed: {e}")
         # Return transactions unchanged on error
         return transactions
@@ -133,7 +134,7 @@ def auto_categorize(
 
 def auto_categorize_for_import_batch(
     db_manager,
-    config: Optional[Config],
+    config: Config | None,
     data_import_id: int,
     batch_size: int,
 ) -> ImportBatchLoad:
@@ -176,7 +177,7 @@ def auto_categorize_for_import_batch(
         provider = None
         try:
             provider = get_llm_provider(config)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - LLM failures must not block ingestion
             logger.error(f"LLM provider unavailable for import batch: {e}")
             llm_failed = True
 

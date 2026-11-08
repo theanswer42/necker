@@ -1,7 +1,5 @@
 """Cash-basis spending summary report."""
 
-from typing import List, Optional
-
 from models.reports import MonthSpendingSummary
 from reports._aggregation import summarize_transactions
 from reports.month_transactions import MonthTransactionsReport
@@ -17,7 +15,7 @@ class CashSpendingSummaryReport:
         self,
         year: int,
         month: int,
-        category_ids: Optional[List[int]] = None,
+        category_ids: list[int] | None = None,
     ) -> MonthSpendingSummary:
         month_txns = MonthTransactionsReport(self.db_manager).run(
             year, month, basis="cash", category_ids=category_ids

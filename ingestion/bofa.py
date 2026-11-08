@@ -2,7 +2,7 @@ import csv
 import logging
 from datetime import datetime
 from decimal import Decimal
-from typing import List, TextIO
+from typing import TextIO
 
 from models.transaction import Transaction
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 _CSV_HEADERS = ["Date", "Description", "Amount", "Running Bal."]
 
 
-def row_to_transaction(row: List[str], account_id: int) -> Transaction:
+def row_to_transaction(row: list[str], account_id: int) -> Transaction:
     """Convert a CSV row to a Transaction object.
 
     Args:
@@ -78,7 +78,7 @@ def row_to_transaction(row: List[str], account_id: int) -> Transaction:
     )
 
 
-def ingest(source: TextIO, account_id: int) -> List[Transaction]:
+def ingest(source: TextIO, account_id: int) -> list[Transaction]:
     """
     Ingest Bank of America CSV transactions.
 
@@ -122,7 +122,7 @@ def ingest(source: TextIO, account_id: int) -> List[Transaction]:
         try:
             transaction = row_to_transaction(row, account_id)
             transactions.append(transaction)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - skip malformed rows, keep ingesting
             logger.error(f"Error processing line {line_num}: {row} - {e}")
             continue
 

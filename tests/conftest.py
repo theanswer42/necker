@@ -2,8 +2,9 @@
 
 import io
 import sqlite3
-import pytest
 from pathlib import Path
+
+import pytest
 
 from cli.output import OutputWriter, TextRenderer
 from config import Config, get_migrations_dir

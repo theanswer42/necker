@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass
@@ -18,5 +17,5 @@ class DataImport:
 
     id: int
     account_id: int
-    filename: Optional[str]
+    filename: str | None
     created_at: datetime

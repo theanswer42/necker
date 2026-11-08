@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
-
 import sys
+
 from logger import get_logger
 from repositories.budgets import BudgetRepository
 from repositories.categories import CategoryRepository
@@ -61,7 +60,7 @@ def cmd_create(args, db_manager, config, output):
     amount_input = input("Amount (in dollars, e.g. 500.00): ").strip()
     try:
         amount_dollars = float(amount_input)
-        amount_cents = int(round(amount_dollars * 100))
+        amount_cents = round(amount_dollars * 100)
     except ValueError:
         logger.error("Amount must be a number.")
         sys.exit(1)
@@ -122,7 +121,7 @@ def cmd_modify(args, db_manager, config, output):
 
     try:
         amount_dollars = float(args.amount)
-        amount_cents = int(round(amount_dollars * 100))
+        amount_cents = round(amount_dollars * 100)
     except ValueError:
         logger.error("Amount must be a number.")
         sys.exit(1)

@@ -75,9 +75,8 @@ class IngestionService:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             archive_filename = f"{account.name}_{timestamp}_{csv_path.name}.gz"
             archive_path = self.config.archive_dir / archive_filename
-            with open(csv_path, "rb") as f_in:
-                with gzip.open(archive_path, "wb") as f_out:
-                    shutil.copyfileobj(f_in, f_out)
+            with open(csv_path, "rb") as f_in, gzip.open(archive_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
         # Create DataImport record and link transactions to it
         data_import = self.data_imports.create(account.id, archive_filename)
@@ -182,16 +181,19 @@ class IngestionService:
                         transactions_to_update[transaction_id][1].add("category_id")
                         category_updated_count += 1
                 else:
-                    if auto_category_name and transaction.auto_category_id:
-                        if transaction.category_id != transaction.auto_category_id:
-                            transaction.category_id = transaction.auto_category_id
-                            if transaction_id not in transactions_to_update:
-                                transactions_to_update[transaction_id] = (
-                                    transaction,
-                                    set(),
-                                )
-                            transactions_to_update[transaction_id][1].add("category_id")
-                            accepted_auto_count += 1
+                    if (
+                        auto_category_name
+                        and transaction.auto_category_id
+                        and transaction.category_id != transaction.auto_category_id
+                    ):
+                        transaction.category_id = transaction.auto_category_id
+                        if transaction_id not in transactions_to_update:
+                            transactions_to_update[transaction_id] = (
+                                transaction,
+                                set(),
+                            )
+                        transactions_to_update[transaction_id][1].add("category_id")
+                        accepted_auto_count += 1
 
                 # Process merchant name updates
                 if merchant_name:
@@ -205,18 +207,19 @@ class IngestionService:
                         transactions_to_update[transaction_id][1].add("merchant_name")
                         merchant_updated_count += 1
                 else:
-                    if auto_merchant_name and transaction.auto_merchant_name:
-                        if transaction.merchant_name != transaction.auto_merchant_name:
-                            transaction.merchant_name = transaction.auto_merchant_name
-                            if transaction_id not in transactions_to_update:
-                                transactions_to_update[transaction_id] = (
-                                    transaction,
-                                    set(),
-                                )
-                            transactions_to_update[transaction_id][1].add(
-                                "merchant_name"
+                    if (
+                        auto_merchant_name
+                        and transaction.auto_merchant_name
+                        and transaction.merchant_name != transaction.auto_merchant_name
+                    ):
+                        transaction.merchant_name = transaction.auto_merchant_name
+                        if transaction_id not in transactions_to_update:
+                            transactions_to_update[transaction_id] = (
+                                transaction,
+                                set(),
                             )
-                            accepted_auto_merchant_count += 1
+                        transactions_to_update[transaction_id][1].add("merchant_name")
+                        accepted_auto_merchant_count += 1
 
                 # Process amortization updates
                 if amortize_months_str:
@@ -248,7 +251,7 @@ class IngestionService:
                         pass  # Invalid value — skip silently (not a skipped row)
 
         total_updated = 0
-        for _txn_id, (transaction, fields_to_update) in transactions_to_update.items():
+        for transaction, fields_to_update in transactions_to_update.values():
             total_updated += self.transactions.batch_update(
                 [transaction], list(fields_to_update)
             )

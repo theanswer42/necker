@@ -75,14 +75,18 @@ class TestBudgetConstraints:
 
     def test_no_action_delete_category_with_budget_raises(self, services, category):
         services.budgets.create(category.id, "monthly", 50000)
-        with services.db_manager.connect() as conn:
-            with pytest.raises(sqlite3.IntegrityError):
-                conn.execute("DELETE FROM categories WHERE id = ?", (category.id,))
+        with (
+            services.db_manager.connect() as conn,
+            pytest.raises(sqlite3.IntegrityError),
+        ):
+            conn.execute("DELETE FROM categories WHERE id = ?", (category.id,))
 
     def test_check_constraint_invalid_period_type(self, services, category):
-        with services.db_manager.connect() as conn:
-            with pytest.raises(sqlite3.IntegrityError):
-                conn.execute(
-                    "INSERT INTO budgets (category_id, period_type, amount) VALUES (?, ?, ?)",
-                    (category.id, "weekly", 50000),
-                )
+        with (
+            services.db_manager.connect() as conn,
+            pytest.raises(sqlite3.IntegrityError),
+        ):
+            conn.execute(
+                "INSERT INTO budgets (category_id, period_type, amount) VALUES (?, ?, ?)",
+                (category.id, "weekly", 50000),
+            )

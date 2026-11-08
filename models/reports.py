@@ -1,7 +1,6 @@
 """Typed output models for the reports layer."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 from models.transaction import Transaction
 
@@ -11,7 +10,7 @@ class MonthTransactions:
     year: int
     month: int
     basis: str  # "cash" or "accrual"
-    transactions: List[Transaction]
+    transactions: list[Transaction]
 
 
 @dataclass
@@ -24,6 +23,6 @@ class MonthSpendingSummary:
     net: int = field(
         metadata={"cli_format": "cents_to_dollars"}
     )  # cents (income - expenses)
-    expenses_by_category: Dict[int, int] = field(
+    expenses_by_category: dict[int, int] = field(
         default_factory=dict, metadata={"cli_format": "cents_to_dollars"}
     )

@@ -242,9 +242,11 @@ from models.transaction import Transaction
 
 _CSV_HEADERS = ["Date", "Description", "Amount"]
 
+
 def row_to_transaction(row: List[str], account_id: int) -> Transaction:
     # Parse row and return Transaction
     ...
+
 
 def ingest(source: TextIO, account_id: int) -> List[Transaction]:
     # Validate headers and process CSV

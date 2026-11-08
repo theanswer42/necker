@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-
-import sys
 import csv
+import sys
 from pathlib import Path
+
 from cli.outputs import (
     ExportResultOutput,
     IngestResultOutput,

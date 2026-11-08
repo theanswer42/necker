@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """CLI commands for analytical reports."""
 
 import sys
@@ -26,7 +25,7 @@ def _parse_month_arg(value: str) -> tuple[int, int]:
 def _parse_month_or_exit(value: str) -> tuple[int, int]:
     try:
         return _parse_month_arg(value)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         logger.error(f"Invalid --month value '{value}'. Expected YYYY/MM.")
         sys.exit(1)
 

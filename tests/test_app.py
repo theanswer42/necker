@@ -1,6 +1,7 @@
 """Tests for the Flask app factory and root route."""
 
 import pytest
+
 from app.app import create_app
 
 

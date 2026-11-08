@@ -1,6 +1,5 @@
 """Account repository for database operations."""
 
-from typing import List, Optional
 from models.account import Account
 
 
@@ -15,7 +14,7 @@ class AccountRepository:
         """
         self.db_manager = db_manager
 
-    def find_all(self) -> List[Account]:
+    def find_all(self) -> list[Account]:
         """Get all accounts from the database.
 
         Returns:
@@ -32,7 +31,7 @@ class AccountRepository:
                 for row in rows
             ]
 
-    def find(self, account_id: int) -> Optional[Account]:
+    def find(self, account_id: int) -> Account | None:
         """Get a single account by ID.
 
         Args:
@@ -54,7 +53,7 @@ class AccountRepository:
                 )
             return None
 
-    def find_by_name(self, name: str) -> Optional[Account]:
+    def find_by_name(self, name: str) -> Account | None:
         """Get a single account by name.
 
         Args:
