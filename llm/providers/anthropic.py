@@ -90,7 +90,6 @@ class AnthropicProvider(LLMProvider):
         model = self.model or rendered_prompt["parameters"].get(
             "model", "claude-haiku-4-5"
         )
-        temperature = rendered_prompt["parameters"].get("temperature", 0.1)
         max_tokens = rendered_prompt["parameters"].get("max_tokens", 4000)
 
         logger.info(
@@ -102,7 +101,6 @@ class AnthropicProvider(LLMProvider):
             response = self.client.messages.parse(
                 model=model,
                 max_tokens=max_tokens,
-                temperature=temperature,
                 system=rendered_prompt["system_prompt"],
                 messages=[
                     {"role": "user", "content": rendered_prompt["user_prompt"]},
