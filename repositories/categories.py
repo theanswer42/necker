@@ -1,6 +1,5 @@
 """Category repository for database operations."""
 
-from typing import List, Optional
 from models.category import Category
 
 
@@ -15,7 +14,7 @@ class CategoryRepository:
         """
         self.db_manager = db_manager
 
-    def find_all(self) -> List[Category]:
+    def find_all(self) -> list[Category]:
         """Get all categories from the database.
 
         Returns:
@@ -32,7 +31,7 @@ class CategoryRepository:
                 for row in rows
             ]
 
-    def find(self, category_id: int) -> Optional[Category]:
+    def find(self, category_id: int) -> Category | None:
         """Get a single category by ID.
 
         Args:
@@ -54,7 +53,7 @@ class CategoryRepository:
                 )
             return None
 
-    def find_by_name(self, name: str) -> Optional[Category]:
+    def find_by_name(self, name: str) -> Category | None:
         """Get a single category by name.
 
         Args:
@@ -79,8 +78,8 @@ class CategoryRepository:
     def create(
         self,
         name: str,
-        description: Optional[str] = None,
-        parent_id: Optional[int] = None,
+        description: str | None = None,
+        parent_id: int | None = None,
     ) -> Category:
         """Create a new category.
 
@@ -114,8 +113,8 @@ class CategoryRepository:
         self,
         category_id: int,
         name: str,
-        description: Optional[str] = None,
-        parent_id: Optional[int] = None,
+        description: str | None = None,
+        parent_id: int | None = None,
     ) -> Category:
         """Update an existing category.
 
@@ -129,7 +128,7 @@ class CategoryRepository:
             The updated Category object.
 
         Raises:
-            Exception: If category not found or update fails.
+            LookupError: If category not found.
         """
         with self.db_manager.connect() as conn:
             cursor = conn.execute(
@@ -139,7 +138,7 @@ class CategoryRepository:
             conn.commit()
 
             if cursor.rowcount == 0:
-                raise Exception(f"Category with ID {category_id} not found")
+                raise LookupError(f"Category with ID {category_id} not found")
 
             return Category(
                 id=category_id,

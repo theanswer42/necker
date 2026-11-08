@@ -2,7 +2,7 @@
 
 import tomllib
 
-from config import Config, load_config, _write_config
+from config import Config, _write_config, load_config
 
 
 class TestSecretKey:

@@ -1,16 +1,15 @@
 """Factory for creating LLM provider instances."""
 
-from typing import Optional
 from config import Config
+from llm.providers.anthropic import AnthropicProvider
 from llm.providers.base import LLMProvider
 from llm.providers.openai import OpenAIProvider
-from llm.providers.anthropic import AnthropicProvider
 from logger import get_logger
 
 logger = get_logger()
 
 
-def get_llm_provider(config: Config) -> Optional[LLMProvider]:
+def get_llm_provider(config: Config) -> LLMProvider | None:
     """Create an LLM provider instance based on configuration.
 
     Args:

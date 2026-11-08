@@ -49,7 +49,8 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 
-[tool.ruff.lint]
-# ruff 0.15+ enables a much larger default rule set. Keep the pre-0.15
-# defaults until the new rules are adopted deliberately.
-select = ["E4", "E7", "E9", "F"]
+[tool.ruff.lint.per-file-ignores]
+# Interface layer: top-level handlers deliberately catch everything to log
+# the error and exit (CLI) or render it (web) instead of crashing.
+"cli/**" = ["BLE001"]
+"app/**" = ["BLE001"]

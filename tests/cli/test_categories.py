@@ -1,8 +1,9 @@
 """Tests for CLI category commands."""
 
-import pytest
 from argparse import Namespace
 from unittest.mock import patch
+
+import pytest
 
 from cli.categories import cmd_delete, cmd_seed
 
@@ -62,7 +63,9 @@ class TestCmdSeed:
 
     def test_seed_file_not_found_exits(self, services, output):
         args = Namespace()
-        with patch("cli.categories.Path.exists", return_value=False):
-            with pytest.raises(SystemExit) as exc:
-                cmd_seed(args, services.db_manager, services.config, output)
+        with (
+            patch("cli.categories.Path.exists", return_value=False),
+            pytest.raises(SystemExit) as exc,
+        ):
+            cmd_seed(args, services.db_manager, services.config, output)
         assert exc.value.code == 1

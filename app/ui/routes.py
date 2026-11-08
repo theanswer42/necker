@@ -6,17 +6,17 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-from flask import render_template, request, current_app, make_response
+from flask import current_app, make_response, render_template, request
 
 from app.ui import ui_bp
+from reports.accrual_spending_summary import AccrualSpendingSummaryReport
+from reports.cash_spending_summary import CashSpendingSummaryReport
+from reports.month_transactions import MonthTransactionsReport
 from repositories.accounts import AccountRepository
 from repositories.budgets import BudgetRepository
 from repositories.categories import CategoryRepository
 from repositories.data_imports import DataImportRepository
 from repositories.transactions import TransactionRepository
-from reports.accrual_spending_summary import AccrualSpendingSummaryReport
-from reports.cash_spending_summary import CashSpendingSummaryReport
-from reports.month_transactions import MonthTransactionsReport
 
 
 def _parse_month(value: str):
@@ -507,7 +507,7 @@ def budget_create():
 
     try:
         amount_dollars = float(amount_str)
-        amount_cents = int(round(amount_dollars * 100))
+        amount_cents = round(amount_dollars * 100)
     except ValueError:
         return (
             render_template(
@@ -584,7 +584,7 @@ def budget_update(budget_id):
 
     try:
         amount_dollars = float(amount_str)
-        amount_cents = int(round(amount_dollars * 100))
+        amount_cents = round(amount_dollars * 100)
     except ValueError:
         budget = budgets_repo.find(budget_id)
         return render_template("fragments/budget_amount_edit.html", budget=budget), 400

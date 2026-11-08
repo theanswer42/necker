@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """CLI commands for analytical reports."""
 
 import sys

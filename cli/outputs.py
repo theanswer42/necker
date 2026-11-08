@@ -6,7 +6,6 @@ rendering.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -15,7 +14,7 @@ class IngestResultOutput:
     inserted: int
     skipped: int
     data_import_id: int
-    archive_path: Optional[str] = None
+    archive_path: str | None = None
 
 
 @dataclass

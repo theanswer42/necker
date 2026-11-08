@@ -36,9 +36,11 @@ class TestStructuralForeignKeys:
         account = services.accounts.create("a", "bofa", "A")
         services.data_imports.create(account.id, "test.csv.gz")
 
-        with services.db_manager.connect() as conn:
-            with pytest.raises(sqlite3.IntegrityError):
-                conn.execute("DELETE FROM accounts WHERE id = ?", (account.id,))
+        with (
+            services.db_manager.connect() as conn,
+            pytest.raises(sqlite3.IntegrityError),
+        ):
+            conn.execute("DELETE FROM accounts WHERE id = ?", (account.id,))
 
     def test_delete_data_import_with_transactions_raises(self, services):
         """Deleting a data_import that has dependent transactions must fail."""
@@ -47,9 +49,11 @@ class TestStructuralForeignKeys:
         t = _make_transaction(account.id, di.id)
         services.transactions.create(t)
 
-        with services.db_manager.connect() as conn:
-            with pytest.raises(sqlite3.IntegrityError):
-                conn.execute("DELETE FROM data_imports WHERE id = ?", (di.id,))
+        with (
+            services.db_manager.connect() as conn,
+            pytest.raises(sqlite3.IntegrityError),
+        ):
+            conn.execute("DELETE FROM data_imports WHERE id = ?", (di.id,))
 
     def test_delete_account_with_no_data_imports_succeeds(self, services):
         """Deleting an account with zero data_imports succeeds."""

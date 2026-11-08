@@ -1,18 +1,19 @@
 """Tests for CLI transaction commands."""
 
 import csv
-import pytest
 from argparse import Namespace
 from datetime import date
 from pathlib import Path
 
-from models.transaction import Transaction
+import pytest
+
 from cli.transactions import (
-    cmd_ingest,
-    cmd_set_category,
     cmd_export,
+    cmd_ingest,
     cmd_set_amortization,
+    cmd_set_category,
 )
+from models.transaction import Transaction
 
 
 def _make_bofa_csv(tmp_path: Path, rows: list, filename: str = "test.csv") -> Path:

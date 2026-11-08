@@ -1,13 +1,13 @@
 """OpenAI provider implementation using structured outputs."""
 
-from typing import List, Optional
-from pydantic import BaseModel
 from openai import OpenAI
-from llm.providers.base import LLMProvider, CategorySuggestion
+from pydantic import BaseModel
+
 from llm.prompts.loader import PromptManager
-from models.transaction import Transaction
-from models.category import Category
+from llm.providers.base import CategorySuggestion, LLMProvider
 from logger import get_logger
+from models.category import Category
+from models.transaction import Transaction
 
 logger = get_logger()
 
@@ -17,21 +17,21 @@ class TransactionCategorization(BaseModel):
     """Single transaction categorization result."""
 
     transaction_id: str
-    category_id: Optional[int] = None
-    merchant_name: Optional[str] = None
-    reasoning: Optional[str] = None
+    category_id: int | None = None
+    merchant_name: str | None = None
+    reasoning: str | None = None
 
 
 class CategorizationResponse(BaseModel):
     """Full categorization response with all transactions."""
 
-    categorizations: List[TransactionCategorization]
+    categorizations: list[TransactionCategorization]
 
 
 class OpenAIProvider(LLMProvider):
     """OpenAI implementation using structured outputs for reliable JSON parsing."""
 
-    def __init__(self, api_key: str, model: Optional[str] = None):
+    def __init__(self, api_key: str, model: str | None = None):
         """Initialize OpenAI provider.
 
         Args:
@@ -44,10 +44,10 @@ class OpenAIProvider(LLMProvider):
 
     def categorize_transactions(
         self,
-        transactions: List[Transaction],
-        categories: List[Category],
-        historical_transactions: List[Transaction],
-    ) -> List[CategorySuggestion]:
+        transactions: list[Transaction],
+        categories: list[Category],
+        historical_transactions: list[Transaction],
+    ) -> list[CategorySuggestion]:
         """Categorize transactions using OpenAI with structured outputs.
 
         Args:
@@ -139,7 +139,7 @@ class OpenAIProvider(LLMProvider):
             logger.error(f"OpenAI API error: {e}")
             raise
 
-    def _format_categories(self, categories: List[Category]) -> str:
+    def _format_categories(self, categories: list[Category]) -> str:
         """Format categories for the prompt."""
         if not categories:
             return "No categories available."
@@ -152,7 +152,7 @@ class OpenAIProvider(LLMProvider):
         return "\n".join(lines)
 
     def _format_historical_transactions(
-        self, transactions: List[Transaction], categories: List[Category]
+        self, transactions: list[Transaction], categories: list[Category]
     ) -> str:
         """Format historical transactions with their categories."""
         if not transactions:
@@ -176,7 +176,7 @@ class OpenAIProvider(LLMProvider):
 
         return "\n".join(lines)
 
-    def _format_transactions(self, transactions: List[Transaction]) -> str:
+    def _format_transactions(self, transactions: list[Transaction]) -> str:
         """Format transactions to categorize."""
         lines = []
         for txn in transactions:

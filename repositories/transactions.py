@@ -2,8 +2,8 @@
 
 import json
 import logging
-from typing import List, Optional
 from datetime import date
+
 from models.transaction import Transaction
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ class TransactionRepository:
 
         return transaction
 
-    def bulk_create(self, transactions: List[Transaction]) -> int:
+    def bulk_create(self, transactions: list[Transaction]) -> int:
         """Create multiple transactions in the database in a single transaction.
 
         Uses INSERT OR IGNORE, so rows whose ID already exists in the database are
@@ -176,7 +176,7 @@ class TransactionRepository:
             return cursor.rowcount
 
     def batch_update(
-        self, transactions: List[Transaction], field_names: List[str]
+        self, transactions: list[Transaction], field_names: list[str]
     ) -> int:
         """Update specified fields for multiple transactions.
 
@@ -245,7 +245,7 @@ class TransactionRepository:
             # Return count of updated rows
             return cursor.rowcount
 
-    def update(self, transaction: Transaction, field_names: List[str]) -> bool:
+    def update(self, transaction: Transaction, field_names: list[str]) -> bool:
         """Update specified fields for a single transaction.
 
         Args:
@@ -263,7 +263,7 @@ class TransactionRepository:
         count = self.batch_update([transaction], field_names)
         return count > 0
 
-    def find_by_account(self, account_id: int) -> List[Transaction]:
+    def find_by_account(self, account_id: int) -> list[Transaction]:
         """Get all transactions for a specific account.
 
         Args:
@@ -286,7 +286,7 @@ class TransactionRepository:
 
             return [self._row_to_transaction(row) for row in rows]
 
-    def find_by_data_import_id(self, data_import_id: int) -> List[Transaction]:
+    def find_by_data_import_id(self, data_import_id: int) -> list[Transaction]:
         """Return all transactions belonging to a given data import.
 
         Args:
@@ -311,7 +311,7 @@ class TransactionRepository:
 
     def find_next_unreviewed_batch(
         self, data_import_id: int, limit: int
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """Return the next batch of unreviewed transactions for a data import.
 
         Args:
@@ -375,7 +375,7 @@ class TransactionRepository:
 
     def find_historical_for_categorization(
         self, account_id: int, limit: int = 200
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """Get historical categorized transactions for use in auto-categorization.
 
         Fetches the most recent transactions from the specified account that have
@@ -405,7 +405,7 @@ class TransactionRepository:
 
             return [self._row_to_transaction(row) for row in rows]
 
-    def find(self, transaction_id: str) -> Optional[Transaction]:
+    def find(self, transaction_id: str) -> Transaction | None:
         """Get a single transaction by ID.
 
         Args:
@@ -434,10 +434,10 @@ class TransactionRepository:
         start_date: str,
         end_date: str,
         *,
-        account_id: Optional[int] = None,
+        account_id: int | None = None,
         exclude_amortized: bool = False,
-        category_ids: Optional[List[int]] = None,
-    ) -> List[Transaction]:
+        category_ids: list[int] | None = None,
+    ) -> list[Transaction]:
         """Get transactions within a date range.
 
         Args:
@@ -483,10 +483,10 @@ class TransactionRepository:
         year: int,
         month: int,
         *,
-        account_id: Optional[int] = None,
+        account_id: int | None = None,
         exclude_amortized: bool = False,
-        category_ids: Optional[List[int]] = None,
-    ) -> List[Transaction]:
+        category_ids: list[int] | None = None,
+    ) -> list[Transaction]:
         """Get transactions for a specific month.
 
         Args:
@@ -521,9 +521,9 @@ class TransactionRepository:
         year: int,
         month: int,
         *,
-        account_id: Optional[int] = None,
-        category_ids: Optional[List[int]] = None,
-    ) -> List[Transaction]:
+        account_id: int | None = None,
+        category_ids: list[int] | None = None,
+    ) -> list[Transaction]:
         """Get accrued transactions for a specific month.
 
         Returns virtual Transaction objects representing the monthly accrual

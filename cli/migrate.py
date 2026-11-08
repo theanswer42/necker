@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from cli.outputs import MigrationStatusOutput, MigrationStatusRow
 from logger import get_logger
 

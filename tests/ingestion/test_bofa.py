@@ -1,8 +1,10 @@
 import io
-import pytest
 from datetime import date
+from decimal import InvalidOperation
 
-from ingestion.bofa import row_to_transaction, ingest
+import pytest
+
+from ingestion.bofa import ingest, row_to_transaction
 
 
 class TestRowToTransaction:
@@ -134,7 +136,7 @@ class TestRowToTransaction:
         row = ["01/15/2025", "DESCRIPTION", "invalid", "1,000.00"]
         account_id = 1
 
-        with pytest.raises(Exception):  # Decimal raises InvalidOperation
+        with pytest.raises(InvalidOperation):
             row_to_transaction(row, account_id)
 
     def test_checksum_consistency(self):

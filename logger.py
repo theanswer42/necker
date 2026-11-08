@@ -5,6 +5,7 @@ Sets up logging to both file (with date-based naming) and console.
 
 import logging
 from datetime import date
+
 from config import Config
 
 

@@ -1,7 +1,6 @@
 """Category model for transaction categorization."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -17,5 +16,5 @@ class Category:
 
     id: int
     name: str
-    description: Optional[str]
-    parent_id: Optional[int] = None
+    description: str | None
+    parent_id: int | None = None

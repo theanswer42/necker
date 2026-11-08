@@ -1,9 +1,10 @@
 """Tests for the ingestion service."""
 
 import csv
-import pytest
 from datetime import date
 from pathlib import Path
+
+import pytest
 
 from services.ingestion import IngestionService
 

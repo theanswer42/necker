@@ -1,7 +1,7 @@
 """DataImport repository for database operations."""
 
-from typing import List, Optional
 from datetime import datetime
+
 from models.data_import import DataImport
 
 
@@ -16,7 +16,7 @@ class DataImportRepository:
         """
         self.db_manager = db_manager
 
-    def create(self, account_id: int, filename: Optional[str]) -> DataImport:
+    def create(self, account_id: int, filename: str | None) -> DataImport:
         """Create a new data import record.
 
         Args:
@@ -49,7 +49,7 @@ class DataImportRepository:
 
             return self._row_to_data_import(row)
 
-    def find(self, data_import_id: int) -> Optional[DataImport]:
+    def find(self, data_import_id: int) -> DataImport | None:
         """Get a single data import by ID.
 
         Args:
@@ -69,7 +69,7 @@ class DataImportRepository:
                 return self._row_to_data_import(row)
             return None
 
-    def find_all(self) -> List[DataImport]:
+    def find_all(self) -> list[DataImport]:
         """Get all data imports across all accounts.
 
         Returns:
@@ -87,7 +87,7 @@ class DataImportRepository:
 
             return [self._row_to_data_import(row) for row in rows]
 
-    def find_by_account(self, account_id: int) -> List[DataImport]:
+    def find_by_account(self, account_id: int) -> list[DataImport]:
         """Get all data imports for a specific account.
 
         Args:

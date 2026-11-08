@@ -4,9 +4,10 @@ Reads configuration from ~/.config/necker.toml and creates default config if nee
 """
 
 import secrets
-from pathlib import Path
-from dataclasses import dataclass, field
 import tomllib
+from dataclasses import dataclass, field
+from pathlib import Path
+
 import tomli_w
 
 
@@ -41,7 +42,7 @@ class Config:
         return self.db_data_dir / self.db_filename
 
     @classmethod
-    def default(cls) -> "Config":
+    def default(cls) -> Config:
         """Create a Config with default values."""
         home = Path.home()
         base_dir = home / "data" / "necker"

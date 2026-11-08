@@ -1,6 +1,6 @@
 """Shared aggregation helpers for spending summary reports."""
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from models.reports import MonthSpendingSummary
 from models.transaction import Transaction

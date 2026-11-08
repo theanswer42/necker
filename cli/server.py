@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """CLI command for running the Flask development server."""
 
 from logger import get_logger

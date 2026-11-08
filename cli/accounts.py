@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
-
 import sys
+
 from ingestion import get_available_modules
 from logger import get_logger
 from repositories.accounts import AccountRepository

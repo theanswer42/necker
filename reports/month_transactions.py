@@ -1,7 +1,5 @@
 """Month transactions report."""
 
-from typing import List, Optional
-
 from models.reports import MonthTransactions
 from repositories.transactions import TransactionRepository
 
@@ -17,7 +15,7 @@ class MonthTransactionsReport:
         year: int,
         month: int,
         basis: str,
-        category_ids: Optional[List[int]] = None,
+        category_ids: list[int] | None = None,
     ) -> MonthTransactions:
         repo = TransactionRepository(self.db_manager)
 

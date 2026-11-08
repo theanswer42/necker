@@ -1,11 +1,14 @@
 import pytest
 
-from ingestion import get_ingestion_module, get_available_modules
-import ingestion.amex as amex
-import ingestion.bofa as bofa
-import ingestion.bofacc as bofacc
-import ingestion.chase as chase
-import ingestion.discover as discover
+from ingestion import (
+    amex,
+    bofa,
+    bofacc,
+    chase,
+    discover,
+    get_available_modules,
+    get_ingestion_module,
+)
 
 
 class TestGetIngestionModule:
