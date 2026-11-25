@@ -141,7 +141,7 @@ The UI follows `toolshed/design_guide` (`GUIDE.md` for layout, components and in
 
 - **Vendored files.** `design.css`, `design.js`, `themes.css` and `fonts/` are copied unchanged into `src/necker/web/static/design/`. Each keeps its `version:` header line (currently `design.css` 0.3.1, `design.js` 0.2.0, `themes.css` 0.2.0). They are never edited in this repo: updating means copying a newer version from toolshed. Formatting hooks and linters skip that directory.
 - **App CSS.** `static/app.css` holds necker-specific rules inside `@layer app { … }`, using tokens only. A test fails if `app.css` contains a raw colour value (hex, `rgb()`, `hsl()`, `oklch()`). A missing token is added to the design guide, not worked around here.
-- **Theme.** The default theme, set by omitting `data-theme` on `<html>`, unless changed here.
+- **Theme.** `sepia`, set with `<html data-theme="sepia">`, which loads `themes.css`. Light and dark follow the system setting.
 - **Pages.** Each page uses one of the guide's page types:
 
 | Page | Guide page type | Notes |
