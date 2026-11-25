@@ -116,7 +116,7 @@ IDs were renumbered by section before approval. They are stable from approval on
 | Category tree | T2 | Visible, recoverable |
 | Rules, LLM prompt building and response parsing | T2 | Output is reviewed by the user before it counts |
 | LLM HTTP client | T3 | Shell. Failures are visible as missing suggestions |
-| Web routes, templates, CSS | T3 | Plumbing and UI |
+| Web routes, templates, app CSS | T3 | Plumbing and UI |
 
 ## Reference models
 
@@ -135,6 +135,26 @@ IDs were renumbered by section before approval. They are stable from approval on
 - State under `/data`: the database, `backups/` (pre-migration and manual snapshots), `archives/` (gzipped copies of every imported CSV).
 - No sessions and no Flask `SECRET_KEY`. Request safety follows the base spec's header rules.
 
+## UI
+
+The UI follows `toolshed/design_guide` (`GUIDE.md` for layout, components and interaction rules). There is no CSS build step and no Tailwind.
+
+- **Vendored files.** `design.css`, `design.js`, `themes.css` and `fonts/` are copied unchanged into `src/necker/web/static/design/`. Each keeps its `version:` header line (currently `design.css` 0.3.1, `design.js` 0.2.0, `themes.css` 0.2.0). They are never edited in this repo: updating means copying a newer version from toolshed. Formatting hooks and linters skip that directory.
+- **App CSS.** `static/app.css` holds necker-specific rules inside `@layer app { … }`, using tokens only. A test fails if `app.css` contains a raw colour value (hex, `rgb()`, `hsl()`, `oklch()`). A missing token is added to the design guide, not worked around here.
+- **Theme.** The default theme, set by omitting `data-theme` on `<html>`, unless changed here.
+- **Pages.** Each page uses one of the guide's page types:
+
+| Page | Guide page type | Notes |
+| --- | --- | --- |
+| Accounts, Categories, Rules, Budgets | Collection (table view) | Add via form page or inline form. Deletes go through the confirm dialog |
+| Import (upload) | Form page | Account picker and file input |
+| Imports | Collection (list view) | Each import shows counts (INV-27) and its review progress |
+| Import review | Bulk edit | Suggested values shown as `<em class="muted">` until confirmed. Sticky footer bar with the single save. `.alert.warning` while the LLM provider is unavailable |
+| Transaction | Detail | `dl.kv` with the imported fields (read-only), plus the allocation editor (splits, amortization) as a form |
+| Reports | App-specific, in the standard shell | Month `.pager` in the toolbar, cash or smoothed as a `.segmented` view switcher, tabs for Summary, By category and Transactions. `.alert.warning` when the report is incomplete (INV-21) |
+
+- **Feedback.** Every mutation ends with a flash, swapped out-of-band into `#flash`, or with inline errors (`.field-error`, `aria-invalid`). Deleting an import uses the confirm dialog, and its message carries the counts INV-9 requires.
+
 ## External consumers
 
 None yet. The JSON API is intended for a future personal-assistant agent. Listing it here will make `docs/openapi.yaml` required.
@@ -145,7 +165,6 @@ None yet. The JSON API is intended for a future personal-assistant agent. Listin
 ## Deviations from the base spec
 
 - **Admin CLI.** `src/necker/admin.py` (argparse) provides `migrate status`, `migrate apply`, `snapshot [path]`, and `reset` (refuses to run outside `.data/`). It runs only inside the container (`docker exec`) or against `.data/` in development. Reason: these operations are destructive or expose all data, and the app has no authentication, so they are never exposed over HTTP. `migrate apply` calls the same function as `serve.py`. `docs/cli.md` is generated from `--help` by `make docs` and checked by a test (a nice-to-have, but cheap for so few commands).
-- **Tailwind CSS.** Built with the standalone Tailwind CLI (v3.4.17, no Node). The built `app.css` is committed so the image build needs no CSS toolchain. Reason: utility CSS for the reports UI without a JS build system.
 - **LLM provider interface.** `clients/llm/` defines a provider protocol with an Anthropic implementation over httpx and a development-only `fake`, selected by `LLM_PROVIDER`. Reason: the user plans to try other providers (Gemini, local models). Prompt building and response parsing live in the core and do not depend on the provider.
 
 ## Open questions
@@ -158,3 +177,4 @@ None yet. The JSON API is intended for a future personal-assistant agent. Listin
 | Date | Change | Approved by |
 | --- | --- | --- |
 | 2026-11-23 | Initial spec for the v2 rebuild | Sagar |
+| 2026-11-25 | Replace Tailwind with `toolshed/design_guide`; add the UI section | pending |
